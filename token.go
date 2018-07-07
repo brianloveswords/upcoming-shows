@@ -6,10 +6,8 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/gob"
-	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/lpabon/godbc"
 	"golang.org/x/crypto/scrypt"
@@ -21,19 +19,8 @@ type encrypted struct {
 	Nonce      []byte
 }
 
-func token() {
-	fmt.Println("lol")
-}
-
 func getKey() []byte {
-	id, ok := os.LookupEnv("SPOTIFY_ID")
-	if !ok {
-		panic("SPOTIFY_ID not set")
-	}
-	secret, ok := os.LookupEnv("SPOTIFY_SECRET")
-	if !ok {
-		panic("SPOTIFY_SECRET not set")
-	}
+	id, secret := loadAuthInfo()
 	dk, err := scrypt.Key([]byte(secret), []byte(id), 32768, 8, 1, 32)
 	if err != nil {
 		panic(err)
@@ -140,8 +127,5 @@ func loadToken(path string) *oauth2.Token {
 	}
 
 	tok := decryptToken(buf.Bytes())
-	if tok.Expiry.Before(time.Now()) {
-		return nil
-	}
 	return tok
 }

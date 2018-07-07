@@ -1,18 +1,41 @@
 * shell pipeline
 spotify-favs | sort | uniq -c | sort -n -r | awk '{if $1 >= 4} { print $0 }}'
 
-* save token
+* DONE save token
+CLOSED: [2018-07-07 Sat 11:27]
 - save
   - get auth token
   - encode to gob bytes
-  - encode using 'clientKey:clientSecret'
+  - encode using key derived from clientSecret
   - save to disk
 
 - load
   - load from disk
-  - decode using 'cilentKey:clientSecret'
+  - decode using key derived from clientSecret
   - decode from gob bytes
 
-*** encrypting
+*** DONE encrypting
+CLOSED: [2018-07-07 Sat 11:27]
 - dk, err := scrypt.Key([]byte("some password"), salt, 32768, 8, 1, 32)
 - then use AES
+
+* DONE check if token *ever* expires
+CLOSED: [2018-07-07 Sat 13:07]
+if it doesn't, we don't have to re-save after load
+
+- it does expire, but let's see what happens if I try to use an expired
+  token, if it auto-refreshes or what
+
+- oh heck yeah, expired tokens auto-refresh so we good
+
+* conditionally re-save the token, only if it's changed
+- saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
+
+* DONE is there a way to save the ID and Secret at build time?
+CLOSED: [2018-07-07 Sat 12:53]
+turns out yes there is:
+
+go build -ldflags "-X main.<variable>=$<NAME>"
+
+* try some literate ass programming and see how it works with editing mode
+I'm gonna guess not so good

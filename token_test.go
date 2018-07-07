@@ -48,23 +48,3 @@ func TestSaveAndLoadToken(t *testing.T) {
 	assert.Equal(t, tok.TokenType, tok2.TokenType)
 	assert.Equal(t, tok.RefreshToken, tok2.RefreshToken)
 }
-
-func TestNoLoadExpiredToken(t *testing.T) {
-	filename := "test-token"
-	defer func() {
-		os.Remove(filename)
-	}()
-
-	tok := &oauth2.Token{
-		AccessToken:  "accesstoken",
-		TokenType:    "tokentype",
-		RefreshToken: "refreshtoken",
-		Expiry:       time.Now().Add(-1 * time.Hour),
-	}
-
-	saveToken(tok, filename)
-
-	// doesn't load exipred token
-	tok2 := loadToken(filename)
-	assert.Nil(t, tok2)
-}

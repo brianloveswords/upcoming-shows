@@ -13,14 +13,27 @@ import (
 )
 
 const redirectURL = "http://localhost:8888"
-const state = "lolwhatever"
+
+// these will be set at build time from env SPOTIFY_ID and SPOTIFY_SECRET
+var clientID string
+var clientSecret string
 
 var tokenPath = path.Join(os.Getenv("HOME"), ".upcoming-shows-token")
+
+// allows runtime overriding of build time auth info
+func loadAuthInfo() (id, secret string) {
+	id = mustGet(clientID, "SPOTIFY_ID")
+	secret = mustGet(clientSecret, "SPOTIFY_SECRET")
+	return id, secret
+}
 
 func setupClient() (client *spotify.Client) {
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
 	auth := spotify.NewAuthenticator(redirectURL, spotify.ScopeUserReadPrivate)
+
+	id, secret := loadAuthInfo()
+	auth.SetAuthInfo(id, secret)
 
 	// see if we can just load a token straight up
 	tok := loadToken(tokenPath)
@@ -34,13 +47,15 @@ func setupClient() (client *spotify.Client) {
 
 	var s *http.Server
 
+	state := randomState()
+
 	// if you didn't store your ID and secret key in the specified environment variables,
 	// you can set them manually here
 	// auth.SetAuthInfo(clientID, secretKey)
 
 	// get the user to this URL - how you do that is up to you
 	// you should specify a unique state string to identify the session
-	url := auth.AuthURL("lolwhatever")
+	url := auth.AuthURL(state)
 
 	fmt.Printf("go here and authenticate\n: %s\n", url)
 	mux := http.NewServeMux()
@@ -90,7 +105,8 @@ func setupClient() (client *spotify.Client) {
 
 func main() {
 	client := setupClient()
-	if tok, err := client.Token(); err != nil {
+	if tok, err := client.Token(); err == nil {
+		fmt.Println(tok.Expiry)
 		// for good measure, in case it does any automatic refreshing
 		saveToken(tok, tokenPath)
 	}
