@@ -133,11 +133,9 @@ func main() {
 
 	fmt.Fprintf(os.Stderr, "user: %s\n", user.ID)
 	artists := processTracklist(tracks)
-	printHistogram(artists)
+	//printHistogram(artists)
+	lookupSongkickIDs(artists)
 }
-
-var SongkickUnknown = 0
-var SongkickNotFound = -1
 
 func processTracklist(tracks []spotify.SavedTrack) (artists []Artist) {
 	hist := artistHistogram(tracks)
@@ -174,11 +172,44 @@ func artistHistogram(tracks []spotify.SavedTrack) map[string]int {
 var trackDataFilename = "saved-tracks.data"
 
 func mustCreate(filename string) *os.File {
-	f, err := os.Create(trackDataFilename)
+	f, err := os.Create(filename)
 	if err != nil {
 		panic(err.Error())
 	}
 	return f
+}
+
+var songkickDataFilename = "songkick.data"
+
+func loadSongkickData() (intmap map[string]int) {
+	return loadIntMap(songkickDataFilename)
+}
+func saveSongkickData(skmap map[string]int) {
+	saveIntMap(songkickDataFilename, skmap)
+}
+
+func loadIntMap(name string) (intmap map[string]int) {
+	f, err := os.Open(name)
+	if err != nil {
+		debugprint("couldn't open intmap data from file '%s'\n", name)
+		return make(map[string]int)
+	}
+	defer f.Close()
+	dec := gob.NewDecoder(f)
+	if err := dec.Decode(&intmap); err != nil {
+		panic(err.Error())
+	}
+	return intmap
+}
+
+func saveIntMap(name string, intmap map[string]int) {
+	f := mustCreate(name)
+	defer f.Close()
+
+	enc := gob.NewEncoder(f)
+	if err := enc.Encode(intmap); err != nil {
+		panic(err)
+	}
 }
 
 func loadTrackData() (tracks []spotify.SavedTrack) {
@@ -194,10 +225,6 @@ func loadTrackData() (tracks []spotify.SavedTrack) {
 	}
 	godbc.Ensure(len(tracks) > 0, "should have found at least one track")
 	return tracks
-}
-
-type trackData struct {
-	Tracks []spotify.SavedTrack
 }
 
 func saveTrackData(tracks []spotify.SavedTrack) {
