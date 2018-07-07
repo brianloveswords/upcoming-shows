@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path"
 	"time"
 
 	"github.com/lpabon/godbc"
@@ -13,12 +15,24 @@ import (
 const redirectURL = "http://localhost:8888"
 const state = "lolwhatever"
 
-func setupClient() (client *spotify.Client) {
-	var s *http.Server
+var tokenPath = path.Join(os.Getenv("HOME"), ".upcoming-shows-token")
 
+func setupClient() (client *spotify.Client) {
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
 	auth := spotify.NewAuthenticator(redirectURL, spotify.ScopeUserReadPrivate)
+
+	// see if we can just load a token straight up
+	tok := loadToken(tokenPath)
+
+	if tok != nil {
+		c := auth.NewClient(tok)
+		client = &c
+		godbc.Ensure(client != nil, "failed to create client")
+		return client
+	}
+
+	var s *http.Server
 
 	// if you didn't store your ID and secret key in the specified environment variables,
 	// you can set them manually here
@@ -38,8 +52,8 @@ func setupClient() (client *spotify.Client) {
 			http.Error(w, "Couldn't get token", http.StatusNotFound)
 			return
 		}
-		// create a client using the specified token
-
+		// save the token and create that shizz
+		saveToken(token, tokenPath)
 		c := auth.NewClient(token)
 		client = &c
 
@@ -76,5 +90,9 @@ func setupClient() (client *spotify.Client) {
 
 func main() {
 	client := setupClient()
+	if tok, err := client.Token(); err != nil {
+		// for good measure, in case it does any automatic refreshing
+		saveToken(tok, tokenPath)
+	}
 	fmt.Println(client.CurrentUser())
 }
