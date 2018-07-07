@@ -124,9 +124,25 @@ func main() {
 	user, _ := client.CurrentUser()
 	tracks := getAllTracks(client)
 
-	fmt.Printf("user: %s\n", user.ID)
-	fmt.Println(len(tracks))
+	fmt.Fprintf(os.Stderr, "user: %s\n", user.ID)
+	hist := artistHistogram(tracks)
+	printHistogram(hist)
+}
 
+func printHistogram(hist map[string]int) {
+	for k, v := range hist {
+		fmt.Printf("%v %s\n", v, k)
+	}
+}
+
+func artistHistogram(tracks []spotify.SavedTrack) map[string]int {
+	hist := make(map[string]int)
+	for _, track := range tracks {
+		for _, artist := range track.Artists {
+			hist[artist.Name]++
+		}
+	}
+	return hist
 }
 
 var trackDataFilename = "saved-tracks.data"
