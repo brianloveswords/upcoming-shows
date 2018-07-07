@@ -39,6 +39,7 @@ func setupClient() (client *spotify.Client) {
 			return
 		}
 		// create a client using the specified token
+
 		c := auth.NewClient(token)
 		client = &c
 
@@ -75,6 +76,5 @@ func setupClient() (client *spotify.Client) {
 
 func main() {
 	client := setupClient()
-
-	fmt.Println(client)
+	fmt.Println(client.CurrentUser())
 }

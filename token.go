@@ -1,15 +1,24 @@
 package main
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/lpabon/godbc"
 	"golang.org/x/crypto/scrypt"
+	"golang.org/x/oauth2"
 )
+
+type encrypted struct {
+	Ciphertext []byte
+	Nonce      []byte
+}
 
 func token() {
 	fmt.Println("lol")
@@ -31,12 +40,35 @@ func getKey() []byte {
 	return dk
 }
 
-func encode(b []byte) (ciphertext, nonce []byte) {
+func encryptToken(tok *oauth2.Token) []byte {
+	// turn token to bytes, then feed to encrypt
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(tok); err != nil {
+		panic(err.Error())
+	}
+	out := buf.Bytes()
+	godbc.Ensure(len(out) > 0, "didn't create out bytes")
+	return out
+}
+func decryptToken(b []byte) *oauth2.Token {
+	buf := bytes.NewBuffer(b)
+	dec := gob.NewDecoder(buf)
+	tok := new(oauth2.Token)
+	if err := dec.Decode(tok); err != nil {
+		panic(err.Error())
+	}
+	return tok
+}
+
+func encrypt(b []byte) []byte {
+	godbc.Require(len(b) > 0, "input length must be > 0")
+
 	block, err := aes.NewCipher(getKey())
 	if err != nil {
 		panic(err.Error())
 	}
-	nonce = make([]byte, 12)
+	nonce := make([]byte, 12)
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
 		panic(err.Error())
 	}
@@ -45,10 +77,26 @@ func encode(b []byte) (ciphertext, nonce []byte) {
 	if err != nil {
 		panic(err.Error())
 	}
-	return gcm.Seal(nil, nonce, b, nil), nonce
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	crypt := encrypted{gcm.Seal(nil, nonce, b, nil), nonce}
+	if err := enc.Encode(crypt); err != nil {
+		panic(err.Error())
+	}
+	out := buf.Bytes()
+	godbc.Ensure(len(out) > 0, "didn't create out bytes")
+	return out
 }
 
-func decode(ciphertext, nonce []byte) []byte {
+func decrypt(buf []byte) []byte {
+	godbc.Require(len(buf) > 0, "buf length must be > 0")
+
+	var crypt encrypted
+	dec := gob.NewDecoder(bytes.NewBuffer(buf))
+	if err := dec.Decode(&crypt); err != nil {
+		panic(err.Error())
+	}
+
 	block, err := aes.NewCipher(getKey())
 	if err != nil {
 		panic(err.Error())
@@ -57,7 +105,7 @@ func decode(ciphertext, nonce []byte) []byte {
 	if err != nil {
 		panic(err.Error())
 	}
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := gcm.Open(nil, crypt.Nonce, crypt.Ciphertext, nil)
 	if err != nil {
 		panic(err.Error())
 	}
