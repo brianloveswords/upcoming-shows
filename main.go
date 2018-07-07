@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/lpabon/godbc"
@@ -114,6 +115,12 @@ func setupClient() (client *spotify.Client) {
 	return client
 }
 
+type Artist struct {
+	Name        string
+	Appearances int
+	SongkickID  int
+}
+
 func main() {
 	client := setupClient()
 	if tok, err := client.Token(); err == nil {
@@ -125,13 +132,32 @@ func main() {
 	tracks := getAllTracks(client)
 
 	fmt.Fprintf(os.Stderr, "user: %s\n", user.ID)
-	hist := artistHistogram(tracks)
-	printHistogram(hist)
+	artists := processTracklist(tracks)
+	printHistogram(artists)
 }
 
-func printHistogram(hist map[string]int) {
+var SongkickUnknown = 0
+var SongkickNotFound = -1
+
+func processTracklist(tracks []spotify.SavedTrack) (artists []Artist) {
+	hist := artistHistogram(tracks)
 	for k, v := range hist {
-		fmt.Printf("%v %s\n", v, k)
+		artists = append(artists, Artist{
+			Appearances: v,
+			Name:        k,
+			SongkickID:  SongkickUnknown,
+		})
+	}
+
+	sort.Slice(artists, func(i, j int) bool {
+		return artists[j].Appearances < artists[i].Appearances
+	})
+	return artists
+}
+
+func printHistogram(artists []Artist) {
+	for _, artist := range artists {
+		fmt.Printf("%v %s\n", artist.Appearances, artist.Name)
 	}
 }
 

@@ -1,5 +1,5 @@
 * shell pipeline
-spotify-favs | sort | uniq -c | sort -n -r | awk '{if $1 >= 4} { print $0 }}'
+spotify-favs | sort | uniq -c | sort -n -r | awk '{if ($1 >= 4) { print $0 }}'
 
 * DONE save token
 CLOSED: [2018-07-07 Sat 11:27]
@@ -34,11 +34,16 @@ turns out yes there is:
 
 go build -ldflags "-X main.<variable>=$<NAME>"
 
-* use ~open~ to just open the url for the user
+* DONE use ~open~ to just open the url for the user
 instead of making them copy and paste a link, maybe that would be better
+
+* do songkick searches to get the songkick ids
+- open search
+- wait on stdin for the id
+- https://www.songkick.com/search?utf8=✓&query=${artist}
 
 * conditionally re-save the token, only if it's changed
 - saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
 
-* try some literate ass programming and see how it works with editing mode
-I'm gonna guess not so good
+* command line flags
+- ~-logout~: remove the auth token
