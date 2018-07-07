@@ -60,7 +60,6 @@ func setupClient() (client *spotify.Client) {
 	fmt.Printf("go here and authenticate\n: %s\n", url)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
 		// use the same state string here that you used to generate the URL
 		token, err := auth.Token(state, r)
 		if err != nil {
@@ -106,8 +105,7 @@ func setupClient() (client *spotify.Client) {
 func main() {
 	client := setupClient()
 	if tok, err := client.Token(); err == nil {
-		fmt.Println(tok.Expiry)
-		// for good measure, in case it does any automatic refreshing
+		debugprint("token expires: %v", tok.Expiry)
 		saveToken(tok, tokenPath)
 	}
 	fmt.Println(client.CurrentUser())

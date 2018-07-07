@@ -1,5 +1,14 @@
 binary=upcoming-shows
+release=release/${binary}
+ldxflags=\
+	-X main.clientID=${SPOTIFY_ID} \
+	-X main.clientSecret=${SPOTIFY_SECRET}
 
-build:
-	@go build -ldflags "-s -w -X main.clientID=${SPOTIFY_ID} -X main.clientSecret=${SPOTIFY_SECRET}"
-	upx ${binary}
+debug:
+	@go build -ldflags "${ldxflags}"
+
+release:
+	@go build -ldflags "-s -w ${ldxflags}" -o ${release}
+	upx ${release}
+
+.PHONY: release debug

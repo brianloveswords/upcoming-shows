@@ -28,14 +28,17 @@ if it doesn't, we don't have to re-save after load
 
 - oh heck yeah, expired tokens auto-refresh so we good
 
-* conditionally re-save the token, only if it's changed
-- saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
-
 * DONE is there a way to save the ID and Secret at build time?
 CLOSED: [2018-07-07 Sat 12:53]
 turns out yes there is:
 
 go build -ldflags "-X main.<variable>=$<NAME>"
+
+* use ~open~ to just open the url for the user
+instead of making them copy and paste a link, maybe that would be better
+
+* conditionally re-save the token, only if it's changed
+- saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
 
 * try some literate ass programming and see how it works with editing mode
 I'm gonna guess not so good
