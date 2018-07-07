@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"time"
 
@@ -27,10 +29,19 @@ func loadAuthInfo() (id, secret string) {
 	return id, secret
 }
 
+func openURL(url string) {
+	cmd := exec.Command("open", url)
+	if err := cmd.Run(); err != nil {
+		// fall back to just printing it
+		fmt.Printf("go here and authenticate\n: %s\n", url)
+		return
+	}
+}
+
 func setupClient() (client *spotify.Client) {
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
-	auth := spotify.NewAuthenticator(redirectURL, spotify.ScopeUserReadPrivate)
+	auth := spotify.NewAuthenticator(redirectURL, spotify.ScopeUserReadPrivate, spotify.ScopeUserLibraryRead)
 
 	id, secret := loadAuthInfo()
 	auth.SetAuthInfo(id, secret)
@@ -57,7 +68,8 @@ func setupClient() (client *spotify.Client) {
 	// you should specify a unique state string to identify the session
 	url := auth.AuthURL(state)
 
-	fmt.Printf("go here and authenticate\n: %s\n", url)
+	openURL(url)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// use the same state string here that you used to generate the URL
@@ -72,7 +84,7 @@ func setupClient() (client *spotify.Client) {
 		client = &c
 
 		w.WriteHeader(200)
-		w.Write([]byte("cool thx bro"))
+		w.Write([]byte("<html><body>cool thx<script>window.close()</script>"))
 
 		// we need to let the handler function complete in order for the
 		// writes to be flushed, so we stick the s.Close() in a
@@ -108,5 +120,80 @@ func main() {
 		debugprint("token expires: %v", tok.Expiry)
 		saveToken(tok, tokenPath)
 	}
-	fmt.Println(client.CurrentUser())
+
+	user, _ := client.CurrentUser()
+	tracks := getAllTracks(client)
+
+	fmt.Printf("user: %s\n", user.ID)
+	fmt.Println(len(tracks))
+
+}
+
+var trackDataFilename = "saved-tracks.data"
+
+func mustCreate(filename string) *os.File {
+	f, err := os.Create(trackDataFilename)
+	if err != nil {
+		panic(err.Error())
+	}
+	return f
+}
+
+func loadTrackData() (tracks []spotify.SavedTrack) {
+	f, err := os.Open(trackDataFilename)
+	if err != nil {
+		debugprint("couldn't open saved track data from file '%s'\n", trackDataFilename)
+		return nil
+	}
+	defer f.Close()
+	dec := gob.NewDecoder(f)
+	if err := dec.Decode(&tracks); err != nil {
+		panic(err.Error())
+	}
+	godbc.Ensure(len(tracks) > 0, "should have found at least one track")
+	return tracks
+}
+
+type trackData struct {
+	Tracks []spotify.SavedTrack
+}
+
+func saveTrackData(tracks []spotify.SavedTrack) {
+	f := mustCreate(trackDataFilename)
+	defer f.Close()
+
+	enc := gob.NewEncoder(f)
+	if err := enc.Encode(tracks); err != nil {
+		panic(err)
+	}
+}
+
+func getAllTracks(client *spotify.Client) (tracks []spotify.SavedTrack) {
+	if savedTracks := loadTrackData(); len(savedTracks) > 0 {
+		debugprint("loading tracks from disk\n")
+		return savedTracks
+	}
+
+	var offset int
+	limit := 50
+	for i := 0; ; i++ {
+		offset = limit * i
+		page, err := client.CurrentUsersTracksOpt(&spotify.Options{
+			Limit:  &limit,
+			Offset: &offset,
+		})
+		if err != nil {
+			log.Fatalf("error getting tracks: %v", err)
+		}
+
+		debugprint("got %s", page.Endpoint)
+
+		tracks = append(tracks, page.Tracks...)
+
+		if len(tracks) >= page.Total {
+			break
+		}
+	}
+	saveTrackData(tracks)
+	return tracks
 }

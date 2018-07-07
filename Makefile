@@ -7,6 +7,9 @@ ldxflags=\
 debug: check-env
 	@go build -ldflags "${ldxflags}"
 
+run-debug: debug
+	./${binary}
+
 release: check-env
 	@go build -ldflags "-s -w ${ldxflags}" -o ${release}
 	upx ${release}
