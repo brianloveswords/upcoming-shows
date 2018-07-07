@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/lpabon/godbc"
 	"golang.org/x/crypto/scrypt"
@@ -51,6 +52,7 @@ func encryptToken(tok *oauth2.Token) []byte {
 	godbc.Ensure(len(out) > 0, "didn't create out bytes")
 	return out
 }
+
 func decryptToken(b []byte) *oauth2.Token {
 	buf := bytes.NewBuffer(b)
 	dec := gob.NewDecoder(buf)
@@ -110,4 +112,36 @@ func decrypt(buf []byte) []byte {
 		panic(err.Error())
 	}
 	return plaintext
+}
+
+func saveToken(tok *oauth2.Token, path string) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	defer f.Close()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if _, err := f.Write(encryptToken(tok)); err != nil {
+		panic(err.Error())
+	}
+}
+
+func loadToken(path string) *oauth2.Token {
+	f, err := os.Open(path)
+	defer f.Close()
+	if err != nil {
+		// fuck it, just return nil
+		return nil
+	}
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, f); err != nil {
+		panic(err.Error())
+	}
+
+	tok := decryptToken(buf.Bytes())
+	if tok.Expiry.Before(time.Now()) {
+		return nil
+	}
+	return tok
 }
