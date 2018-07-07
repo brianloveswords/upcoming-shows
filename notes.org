@@ -1,2 +1,18 @@
 * shell pipeline
 spotify-favs | sort | uniq -c | sort -n -r | awk '{if $1 >= 4} { print $0 }}'
+
+* save token
+- save
+  - get auth token
+  - encode to gob bytes
+  - encode using 'clientKey:clientSecret'
+  - save to disk
+
+- load
+  - load from disk
+  - decode using 'cilentKey:clientSecret'
+  - decode from gob bytes
+
+*** encrypting
+- dk, err := scrypt.Key([]byte("some password"), salt, 32768, 8, 1, 32)
+- then use AES
