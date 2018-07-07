@@ -48,13 +48,13 @@ func encryptToken(tok *oauth2.Token) []byte {
 	if err := enc.Encode(tok); err != nil {
 		panic(err.Error())
 	}
-	out := buf.Bytes()
+	out := encrypt(buf.Bytes())
 	godbc.Ensure(len(out) > 0, "didn't create out bytes")
 	return out
 }
 
 func decryptToken(b []byte) *oauth2.Token {
-	buf := bytes.NewBuffer(b)
+	buf := bytes.NewBuffer(decrypt(b))
 	dec := gob.NewDecoder(buf)
 	tok := new(oauth2.Token)
 	if err := dec.Decode(tok); err != nil {
