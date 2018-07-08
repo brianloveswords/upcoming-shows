@@ -9,6 +9,7 @@ import (
 
 	"github.com/lpabon/godbc"
 	"github.com/zmb3/spotify"
+	"golang.org/x/oauth2"
 )
 
 const redirectURL = "http://localhost:8888"
@@ -40,13 +41,24 @@ func loadAuthInfo() (id, secret string) {
 func setupClient() (client *spotify.Client) {
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
+	var tok *oauth2.Token
+	defer func() {
+		expiry := tok.Expiry
+		if newtok, err := client.Token(); err == nil {
+			if newtok.Expiry.After(expiry) {
+				debugprint("saving new token: %v", tok.Expiry)
+				saveToken(tok, tokenPath)
+			}
+		}
+	}()
+
 	auth := spotify.NewAuthenticator(redirectURL, permissions...)
 
 	id, secret := loadAuthInfo()
 	auth.SetAuthInfo(id, secret)
 
 	// see if we can just load a token straight up
-	tok := loadToken(tokenPath)
+	tok = loadToken(tokenPath)
 
 	if tok != nil {
 		c := auth.NewClient(tok)

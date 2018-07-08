@@ -44,7 +44,7 @@ instead of making them copy and paste a link, maybe that would be better
 
 - make sure to url encode the artist name
 
-* make playlist from songkick url
+* DONE make playlist from songkick url
 - eg: https://www.songkick.com/concerts/33692814-royal-they-at-alphaville
 - scrape Line-up, add latest album from each band to playlist
 
@@ -52,10 +52,20 @@ instead of making them copy and paste a link, maybe that would be better
   - [X] create playlist
   - [X] add latest album for 1 artist by ID to playlist
   - [X] artist search -> spotify ID
-  - [ ] scrape lineup (page -> [artistIDs])
+  - [X] scrape lineup (page -> [artistIDs])
 
-* conditionally re-save the token, only if it's changed
+* DONE conditionally re-save the token, only if it's changed
 - saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
 
 * command line flags
-- ~-logout~: remove the auth token
+- [ ] spotify auth clear
+- [ ] spotify auth debug
+
+- [ ] spotify playing show
+- [X] spotify playing fav
+- [ ] spotify playing next
+- [ ] spotify playing pause
+- [ ] spotify playing play
+
+* Error handling
+- what happens if you try to fav a track and nothing's playing?

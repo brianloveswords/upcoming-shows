@@ -15,35 +15,7 @@ type Artist struct {
 }
 
 func main() {
-	client := setupClient()
-
-	if tok, err := client.Token(); err == nil {
-		debugprint("token expires: %v", tok.Expiry)
-		saveToken(tok, tokenPath)
-	}
-
-	user, _ := client.CurrentUser()
-	fmt.Fprintf(os.Stderr, "user: %s\n", user.ID)
-
-	// tracks := getAllTracks(client)
-	// artists := processTracklist(tracks)
-	// printHistogram(artists)
-	// lookupSongkickIDs(artists)
-	// addCurrentlyPlayingToLibrary(client)
-	getCurrentArtistID(client)
-
-	// page := "https://www.songkick.com/concerts/33692814-royal-they-at-alphaville"
-	page := os.Args[1]
-	if page == "" {
-		fmt.Printf("must provide a songkick page")
-		os.Exit(1)
-	}
-
-	artists := artistsFromSongkickPage(page)
-	if len(artists) > 0 {
-		createShowPlaylist(client, artists)
-	}
-	fmt.Println(artists)
+	cliRouter(os.Args[1:])
 }
 
 func createShowPlaylist(c *spotify.Client, artists []string) *spotify.FullPlaylist {
@@ -160,7 +132,7 @@ func createPlaylist(client *spotify.Client, name string) *spotify.FullPlaylist {
 	return playlist
 }
 
-func addCurrentlyPlayingToLibrary(client *spotify.Client) {
+func addCurrentlyPlayingToLibrary(client *spotify.Client) *spotify.FullTrack {
 	playing, err := client.PlayerCurrentlyPlaying()
 	if err != nil {
 		panic(err)
@@ -169,10 +141,7 @@ func addCurrentlyPlayingToLibrary(client *spotify.Client) {
 	if err := client.AddTracksToLibrary(playing.Item.ID); err != nil {
 		panic(err)
 	}
-
-	fmt.Printf("%s (%s) added to library\n",
-		songAttributionFromTrack(playing.Item),
-		playing.Item.ID)
+	return playing.Item
 }
 
 func songAttributionFromTrack(track *spotify.FullTrack) string {

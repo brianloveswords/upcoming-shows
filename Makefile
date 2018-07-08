@@ -1,4 +1,4 @@
-binary=upcoming-shows
+binary=spotify
 release=release/${binary}
 ldxflags=\
 	-X main.clientID=${SPOTIFY_ID} \
