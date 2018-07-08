@@ -42,6 +42,8 @@ instead of making them copy and paste a link, maybe that would be better
 - wait on stdin for the id
 - https://www.songkick.com/search?utf8=✓&query=${artist}
 
+- make sure to url encode the artist name
+
 * conditionally re-save the token, only if it's changed
 - saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
 

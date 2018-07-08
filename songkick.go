@@ -15,6 +15,15 @@ import (
 	"golang.org/x/net/html"
 )
 
+var songkickDataFilename = "artist-songkick.data"
+
+func loadSongkickData() (intmap map[string]int) {
+	return loadIntMap(songkickDataFilename)
+}
+func saveSongkickData(skmap map[string]int) {
+	saveIntMap(songkickDataFilename, skmap)
+}
+
 func getIDFromSongkickPage(artist string) int {
 	resp, err := http.Get(songkickArtistURL(artist))
 	if err != nil {
