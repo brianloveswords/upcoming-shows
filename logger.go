@@ -35,6 +35,10 @@ func NewLogger() Logger {
 		Level:       LoggerLevelNormal,
 	}
 }
+func (l *Logger) Fatal(format string, v ...interface{}) {
+	l.Log(format, v)
+	os.Exit(1)
+}
 
 func (l *Logger) Extreme(format string, v ...interface{}) {
 	if l.Level < LoggerLevelExtreme {
@@ -87,6 +91,13 @@ func (l *Logger) Enter(name string) func() {
 		l.Stack = l.Stack[:len(l.Stack)-1]
 	}
 }
+
+func (l *Logger) IsLevelSilent() bool  { return l.Level <= LoggerLevelSilent }
+func (l *Logger) IsLevelNormal() bool  { return l.Level <= LoggerLevelNormal }
+func (l *Logger) IsLevelLog() bool     { return l.Level <= LoggerLevelNormal }
+func (l *Logger) IsLevelVerbose() bool { return l.Level <= LoggerLevelVerbose }
+func (l *Logger) IsLevelDebug() bool   { return l.Level <= LoggerLevelDebug }
+func (l *Logger) IsLevelExtreme() bool { return l.Level <= LoggerLevelExtreme }
 
 func (l *Logger) stackString() string {
 	fpath := strings.Join(l.Stack, ":")

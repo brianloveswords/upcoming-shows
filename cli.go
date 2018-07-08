@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -11,13 +9,37 @@ import (
 	"github.com/zmb3/spotify"
 )
 
+var glog = NewLogger()
+
+func setLogLevel() {
+	switch os.Getenv("LOGLEVEL") {
+	case "silent":
+		glog.Level = LoggerLevelSilent
+
+	case "":
+		fallthrough
+	case "normal":
+		glog.Level = LoggerLevelNormal
+
+	case "verbose":
+		glog.Level = LoggerLevelVerbose
+
+	case "debug":
+		glog.Level = LoggerLevelDebug
+
+	case "extreme":
+		glog.Level = LoggerLevelExtreme
+	}
+}
+
 func usageAndExit() {
 	// TODO: fill this out
-	fmt.Fprintf(os.Stderr, "spotify usage goes here\n")
-	os.Exit(1)
+	glog.Fatal("spotify usage goes here")
 }
 
 func cliRouter(args []string) {
+	setLogLevel()
+
 	if len(args) == 0 {
 		usageAndExit()
 	}
@@ -46,14 +68,14 @@ func cliRouter(args []string) {
 		playlistRouter(args[1:])
 
 	default:
-		fmt.Fprintf(os.Stderr, "err: %s not a valid subcommand\n", subcmd)
+		glog.Log("err: %s not a valid subcommand", subcmd)
 		usageAndExit()
 	}
 }
 
 func playingRouter(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "err: missing command for playing\n")
+		glog.Log("err: missing command for playing")
 		usageAndExit()
 	}
 
@@ -61,14 +83,14 @@ func playingRouter(args []string) {
 	case "fav":
 		playingFav()
 	default:
-		fmt.Fprintf(os.Stderr, "err: %s not a valid subcommand\n", subcmd)
+		glog.Log("err: %s not a valid subcommand", subcmd)
 		usageAndExit()
 	}
 }
 
 func playlistRouter(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "err: missing command for playlist\n")
+		glog.Log("err: missing command for playlist")
 		usageAndExit()
 	}
 
@@ -76,23 +98,24 @@ func playlistRouter(args []string) {
 	case "create":
 		playlistCreate(args[1:])
 	default:
-		fmt.Fprintf(os.Stderr, "err: %s not a valid subcommand\n", subcmd)
+		glog.Log("err: %s not a valid subcommand", subcmd)
 		usageAndExit()
 	}
 }
 
 func playlistCreate(args []string) {
+	defer glog.Enter("playlistCreate")()
+
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "err: not enough arguments found for `create`\n")
+		glog.Log("err: not enough arguments found for `create`")
 		usageAndExit()
 	}
 	switch playlistCreateParse(args) {
 	case "songkick-show":
-		fmt.Println("creating playlist from songkick show page")
 		playlistFromSongkickShowPage(args[0])
 		// create playlist from songkick show page
 	case "plain":
-		fmt.Println("creating plain playlist")
+		glog.Log("TODO: create plain playlist")
 		// create playlist by the name given
 	}
 }
@@ -100,31 +123,34 @@ func playlistCreate(args []string) {
 var reURL = regexp.MustCompile("^https?://")
 
 func playlistCreateParse(args []string) string {
+	defer glog.Enter("playlistCreateParse")()
+
 	input := args[0]
 	if reURL.MatchString(input) {
 		if strings.HasPrefix(input, "https://www.songkick.com/concerts/") {
 			return "songkick-show"
 		}
-		log.Fatalf("don't know what to do with url %s", input)
+		glog.Fatal("don't know what to do with url %s", input)
 	}
 
 	return "plain"
 }
 
 func playlistFromSongkickShowPage(url string) {
-	// TODO: option to open the resulting spotify playlist??
+	defer glog.Enter("playlistFromSongkickShowPage")()
+	glog.Verbose("creating playlist from page %s", color.YellowString(url))
 
 	client := setupClient()
 	artists := artistsFromSongkickShowPage(url)
 	name := strings.Join(artists, "/")
 
-	fmt.Print("creating playlist ")
-	color.Cyan(name)
+	glog.Log("creating playlist %s", color.CyanString(name))
 
 	playlist := createPlaylist(client, name)
 	addArtistLatestAlbumsPlaylist(client, playlist, artists)
 
-	fmt.Println(playlist.URI)
+	// TODO: option to open the resulting spotify playlist??
+	glog.CmdOutput("%s", playlist.URI)
 }
 
 func addArtistLatestAlbumsPlaylist(
@@ -132,14 +158,13 @@ func addArtistLatestAlbumsPlaylist(
 	playlist *spotify.FullPlaylist,
 	artists []string,
 ) *spotify.FullPlaylist {
+	defer glog.Enter("addArtistLatestAlbumsPlaylist")()
 	for _, artist := range artists {
-
 		id := findArtistID(client, artist)
 		if id == nil {
-			fmt.Fprintf(os.Stderr, "couldn't find an artist result for %s\n", artist)
+			glog.Log("couldn't find an artist result for %s", color.RedString(artist))
 			continue
 		}
-
 		albums := getLatestAlbums(client, *id)
 		addAlbumsToPlaylist(client, playlist, albums)
 	}
@@ -147,58 +172,60 @@ func addArtistLatestAlbumsPlaylist(
 }
 
 func playingFav() {
+	defer glog.Enter("playingFav")()
 	client := setupClient()
-	track := addCurrentlyPlayingToLibrary(client)
-
-	fmt.Print("added to library: ")
-	color.Cyan(songAttributionFromTrack(track))
+	playing, err := client.PlayerCurrentlyPlaying()
+	if err != nil {
+		glog.Fatal("could not get currently playing: %s", err)
+	}
+	track := playing.Item
+	if err := client.AddTracksToLibrary(track.ID); err != nil {
+		glog.Fatal("could add track to library: %s", err)
+	}
+	name := songAttributionFromTrack(track)
+	glog.Log("adding to library: %s", color.CyanString(name))
 }
 
 func mainPlay() {
+	defer glog.Enter("mainPlay")()
 	client := setupClient()
+	if glog.IsLevelNormal() {
+		logCurrentTrack(client, "playing")
+	}
 	if err := client.Play(); err != nil {
-		log.Fatal("couldn't start playback: ", err)
+		glog.Fatal("couldn't start playback: %s", err)
 	}
 }
 func mainPause() {
+	defer glog.Enter("mainPause")()
 	client := setupClient()
+	if glog.IsLevelNormal() {
+		logCurrentTrack(client, "pausing")
+	}
 	if err := client.Pause(); err != nil {
-		log.Fatal("couldn't pause playback: ", err)
+		glog.Fatal("couldn't pause playback: %s", err)
 	}
 }
+
+func logCurrentTrack(client *spotify.Client, prefix string) {
+	playing, _ := client.PlayerCurrentlyPlaying()
+	if playing != nil {
+		song := songAttributionFromTrack(playing.Item)
+		glog.Log("%s %s", prefix, color.CyanString(song))
+	}
+}
+
 func mainNext() {
+	defer glog.Enter("mainNext")()
 	client := setupClient()
 	if err := client.Next(); err != nil {
-		log.Fatal("couldn't skip track: ", err)
+		glog.Fatal("couldn't skip track: ", err)
 	}
 }
 func mainPrev() {
+	defer glog.Enter("mainPrev")()
 	client := setupClient()
 	if err := client.Previous(); err != nil {
-		log.Fatal("couldn't go back: ", err)
+		glog.Fatal("couldn't go back: ", err)
 	}
 }
-
-// client := setupClient()
-// user, _ := client.CurrentUser()
-// fmt.Fprintf(os.Stderr, "user: %s\n", user.ID)
-
-// tracks := getAllTracks(client)
-// artists := processTracklist(tracks)
-// printHistogram(artists)
-// lookupSongkickIDs(artists)
-// addCurrentlyPlayingToLibrary(client)
-// fmt.Println(getCurrentArtistID(client))
-
-// page := "https://www.songkick.com/concerts/33692814-royal-they-at-alphaville"
-// page := os.Args[1]
-// if page == "" {
-// 	fmt.Printf("must provide a songkick page")
-// 	os.Exit(1)
-// }
-
-// artists := artistsFromSongkickPage(page)
-// if len(artists) > 0 {
-// 	createShowPlaylist(client, artists)
-// }
-// fmt.Println(artists)

@@ -39,6 +39,8 @@ func loadAuthInfo() (id, secret string) {
 }
 
 func setupClient() (client *spotify.Client) {
+	defer glog.Enter("setupClient")()
+
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
 	var tok *oauth2.Token

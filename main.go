@@ -116,18 +116,6 @@ func createPlaylist(client *spotify.Client, name string) *spotify.FullPlaylist {
 	return playlist
 }
 
-func addCurrentlyPlayingToLibrary(client *spotify.Client) *spotify.FullTrack {
-	playing, err := client.PlayerCurrentlyPlaying()
-	if err != nil {
-		panic(err)
-	}
-
-	if err := client.AddTracksToLibrary(playing.Item.ID); err != nil {
-		panic(err)
-	}
-	return playing.Item
-}
-
 func songAttributionFromTrack(track *spotify.FullTrack) string {
 	song := track.Name
 	return fmt.Sprintf("%s - %s", artistFromTrack(track), song)

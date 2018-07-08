@@ -297,7 +297,6 @@ func lookupSongkickIDs(artists []Artist) {
 		artist.SongkickID = id
 		skmap[artist.Name] = id
 		saveSongkickData(skmap)
-
 	}
 
 	fmt.Printf("manual identification needed for %d artists:\n", len(notfound))
