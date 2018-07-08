@@ -37,12 +37,22 @@ go build -ldflags "-X main.<variable>=$<NAME>"
 * DONE use ~open~ to just open the url for the user
 instead of making them copy and paste a link, maybe that would be better
 
-* do songkick searches to get the songkick ids
+* DONE do songkick searches to get the songkick ids
 - open search
 - wait on stdin for the id
 - https://www.songkick.com/search?utf8=✓&query=${artist}
 
 - make sure to url encode the artist name
+
+* make playlist from songkick url
+- eg: https://www.songkick.com/concerts/33692814-royal-they-at-alphaville
+- scrape Line-up, add latest album from each band to playlist
+
+  babysteps
+  - [X] create playlist
+  - [X] add latest album for 1 artist by ID to playlist
+  - [ ] artist search -> spotify ID
+  - [ ] scrape lineup (page -> [artistIDs])
 
 * conditionally re-save the token, only if it's changed
 - saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.

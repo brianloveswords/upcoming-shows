@@ -17,6 +17,7 @@ var permissions = []string{
 	spotify.ScopeUserReadPrivate,
 	spotify.ScopeUserLibraryRead,
 	spotify.ScopePlaylistModifyPrivate,
+	spotify.ScopePlaylistModifyPublic,
 	spotify.ScopeUserLibraryModify,
 	spotify.ScopeUserModifyPlaybackState,
 	spotify.ScopeUserReadCurrentlyPlaying,
