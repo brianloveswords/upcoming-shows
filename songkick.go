@@ -24,12 +24,112 @@ func saveSongkickData(skmap map[string]int) {
 	saveIntMap(songkickDataFilename, skmap)
 }
 
+func artistsFromSongkickPage(url string) []string {
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("didn't get 200 lookup up %s, got %d", url, resp.StatusCode)
+	}
+	return parseShowPage(resp.Body)
+}
+
+func parseShowPage(r io.Reader) (artists []string) {
+	doc, err := html.Parse(r)
+	if err != nil {
+		panic(err)
+	}
+	lineup := getElementByClass(doc, "line-up")
+
+	for _, el := range getElementsByTagName(lineup, "span") {
+		artists = append(artists, getFirstTextData(el))
+	}
+	return artists
+}
+
+func getFirstTextData(n *html.Node) string {
+	var visit func(n *html.Node, found string) string
+	visit = func(n *html.Node, found string) string {
+		if found != "" {
+			return found
+		}
+
+		if n.Type == html.TextNode && !isEmpty(n.Data) {
+			return n.Data
+		}
+
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			found = visit(c, found)
+		}
+		return found
+	}
+	return visit(n, "")
+}
+
+func isEmpty(s string) bool {
+	return strings.Trim(s, "\n ") == ""
+}
+
+func getElementsByTagName(n *html.Node, tag string) []*html.Node {
+	var found []*html.Node
+	forEachNode(n, func(el *html.Node) {
+		if el.Type == html.ElementNode && el.Data == tag {
+			found = append(found, el)
+		}
+	}, nil)
+	return found
+}
+
+func getElementsByClass(n *html.Node, class string) []*html.Node {
+	var found []*html.Node
+	forEachNode(n, func(el *html.Node) {
+		if lookupAttr(el, "class") == class {
+			found = append(found, el)
+		}
+	}, nil)
+	return found
+}
+
+func getElementByClass(n *html.Node, class string) *html.Node {
+	var visit func(n *html.Node, class string, found *html.Node) *html.Node
+	visit = func(n *html.Node, class string, found *html.Node) *html.Node {
+		if found != nil {
+			return found
+		}
+		if lookupAttr(n, "class") == class {
+			return n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			found = visit(c, class, found)
+		}
+		return found
+	}
+	return visit(n, class, nil)
+}
+
+func lookupAttr(n *html.Node, attr string) string {
+	for _, a := range n.Attr {
+		if a.Key == attr {
+			return a.Val
+		}
+	}
+	return ""
+}
+
 func getIDFromSongkickPage(artist string) int {
-	resp, err := http.Get(songkickArtistURL(artist))
+	url := songkickArtistURL(artist)
+	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("didn't get 200 lookup up %s, got %d", url, resp.StatusCode)
+	}
 	return parseSongkickPage(resp.Body, artist)
 }
 
@@ -160,7 +260,6 @@ var songkickBaseURL = "https://www.songkick.com/search?utf8=✓&query=%s&type=ar
 
 func songkickArtistURL(name string) string {
 	location := fmt.Sprintf(songkickBaseURL, url.QueryEscape(name))
-	fmt.Println(location)
 	return location
 }
 

@@ -32,11 +32,18 @@ func main() {
 	// addCurrentlyPlayingToLibrary(client)
 	getCurrentArtistID(client)
 
-	createShowPlaylist(client, []string{
-		"The Royal They",
-		"Ovlov",
-		"Two Inch Astronaut",
-	})
+	// page := "https://www.songkick.com/concerts/33692814-royal-they-at-alphaville"
+	page := os.Args[1]
+	if page == "" {
+		fmt.Printf("must provide a songkick page")
+		os.Exit(1)
+	}
+
+	artists := artistsFromSongkickPage(page)
+	if len(artists) > 0 {
+		createShowPlaylist(client, artists)
+	}
+	fmt.Println(artists)
 }
 
 func createShowPlaylist(c *spotify.Client, artists []string) *spotify.FullPlaylist {
