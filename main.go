@@ -32,15 +32,48 @@ func main() {
 	// addCurrentlyPlayingToLibrary(client)
 	getCurrentArtistID(client)
 
-	// Hail Mary Mallon
-	artistID := spotify.ID("7EKqpEerzxJ1rOu1gRNMJa")
-	albums := getLatestAlbums(client, artistID)
-	// playlist := createPlaylist(client, "test playlist")
+	createShowPlaylist(client, []string{
+		"The Royal They",
+		"Ovlov",
+		"Two Inch Astronaut",
+	})
+}
 
-	fmt.Println(len(albums))
+func createShowPlaylist(c *spotify.Client, artists []string) *spotify.FullPlaylist {
+	playlistName := strings.Join(artists, "/")
+	playlist := createPlaylist(c, playlistName)
+	for _, artist := range artists {
 
-	//	addAlbumsToPlaylist(client, playlist, albums)
+		id := findArtistID(c, artist)
+		if id == nil {
+			debugprint("couldn't find an artist result for %s\n", artist)
+			continue
+		}
 
+		albums := getLatestAlbums(c, *id)
+		addAlbumsToPlaylist(c, playlist, albums)
+	}
+	return playlist
+}
+
+func findArtistID(c *spotify.Client, artist string) *spotify.ID {
+	page, err := c.Search(artist, spotify.SearchTypeArtist)
+	if err != nil {
+		panic(err)
+	}
+
+	artists := page.Artists.Artists
+
+	if len(artists) == 1 {
+		return &artists[0].ID
+	}
+
+	for _, found := range artists {
+		if found.Name == artist {
+			return &found.ID
+		}
+	}
+	return nil
 }
 
 func getAlbumTracks(c *spotify.Client, album *spotify.SimpleAlbum) []spotify.SimpleTrack {

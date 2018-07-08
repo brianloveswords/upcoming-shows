@@ -51,7 +51,7 @@ instead of making them copy and paste a link, maybe that would be better
   babysteps
   - [X] create playlist
   - [X] add latest album for 1 artist by ID to playlist
-  - [ ] artist search -> spotify ID
+  - [X] artist search -> spotify ID
   - [ ] scrape lineup (page -> [artistIDs])
 
 * conditionally re-save the token, only if it's changed
