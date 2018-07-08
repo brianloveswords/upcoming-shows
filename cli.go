@@ -82,6 +82,8 @@ func playingRouter(args []string) {
 	switch subcmd := args[0]; subcmd {
 	case "fav":
 		playingFav()
+	case "show":
+		playingShow(args[1:])
 	default:
 		glog.Log("err: %s not a valid subcommand", subcmd)
 		usageAndExit()
@@ -169,6 +171,43 @@ func addArtistLatestAlbumsPlaylist(
 		addAlbumsToPlaylist(client, playlist, albums)
 	}
 	return playlist
+}
+
+func playingShow(args []string) {
+	defer glog.Enter("playingFav")()
+	client := setupClient()
+	playing, err := client.PlayerCurrentlyPlaying()
+	if err != nil {
+		glog.Fatal("could not get currently playing: %s", err)
+	}
+	track := playing.Item
+
+	if len(args) == 0 {
+		name := songAttributionFromTrack(track)
+		glog.Log("currently playing %s", color.CyanString(name))
+		return
+	}
+	switch args[0] {
+	case "help":
+		fallthrough
+	case "--help":
+		glog.Fatal("TODO: implement help")
+	case "artist":
+		glog.CmdOutput("%s", track.Artists[0].Name)
+	case "artist-id":
+		glog.CmdOutput("%s", track.Artists[0].ID)
+	case "artist-uri":
+		glog.CmdOutput("%s", track.Artists[0].URI)
+	case "track":
+		glog.CmdOutput("%s", track.Name)
+	case "track-id":
+		glog.CmdOutput("%s", track.ID)
+	case "track-uri":
+		glog.CmdOutput("%s", track.URI)
+	default:
+		glog.Debug("fell through switch")
+		glog.Fatal("I don't understand argument %s", color.RedString(args[0]))
+	}
 }
 
 func playingFav() {

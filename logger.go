@@ -36,7 +36,7 @@ func NewLogger() Logger {
 	}
 }
 func (l *Logger) Fatal(format string, v ...interface{}) {
-	l.Log(format, v)
+	l.Log(format, v...)
 	os.Exit(1)
 }
 
@@ -71,15 +71,15 @@ func (l *Logger) Log(format string, v ...interface{}) {
 	l.stderrPrint(format, v...)
 }
 func (l *Logger) stderrPrint(format string, v ...interface{}) {
-	msg := fmt.Sprintf(format, v...)
-	fmt.Fprintf(l.Stderr, msg+"\n")
+	fmt.Fprintf(l.Stderr, format+"\n", v...)
 }
+
 func (l *Logger) CmdOutput(format string, v ...interface{}) {
 	l.stdoutPrint(format, v...)
 }
 func (l *Logger) stdoutPrint(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	fmt.Fprintf(l.Stdout, msg+"\n")
+	fmt.Fprint(l.Stdout, msg+"\n")
 }
 func (l *Logger) Enter(name string) func() {
 	l.Stack = append(l.Stack, name)
