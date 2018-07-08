@@ -24,7 +24,7 @@ func saveSongkickData(skmap map[string]int) {
 	saveIntMap(songkickDataFilename, skmap)
 }
 
-func artistsFromSongkickPage(url string) []string {
+func artistsFromSongkickShowPage(url string) []string {
 	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)

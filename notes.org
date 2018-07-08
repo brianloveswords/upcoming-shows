@@ -61,11 +61,37 @@ instead of making them copy and paste a link, maybe that would be better
 - [ ] spotify auth clear
 - [ ] spotify auth debug
 
-- [ ] spotify playing show
+- [X] spotify next
+- [X] spotify pause
+- [X] spotify play
+
 - [X] spotify playing fav
-- [ ] spotify playing next
-- [ ] spotify playing pause
-- [ ] spotify playing play
+
+- [ ] spotify playlist create ...
+
+* printing
+think about:
+
+- which functions should print at all, and which are "internal" and should shut the fuck up and just return different types of errors?
+- different levels of verbose? debug/verbose/normal/silent
+- how to structure debugging printer so it's ~grep~ friendly
+- 1 global logger to rule them all
+- everything prints to stderr except CmdOutput
+- color optional?
+- env var, LOGLEVEL:<debug|verbose|normal|silent>
+
+logger.Debug
+
+- [debug] playlist:create:request-songkick-page: requesting page
+- [debug] playlist:create:parse-songkick-page: parsing page
+- [debug] playlist:create:parse-songkick-page: extracted xyz
+- [debug] playlist:create:parse-songkick-page: couldn't do the thing
+
+logger.Verbose
+
+logger.Normal
+
+logger.CmdOutput
 
 * Error handling
 - what happens if you try to fav a track and nothing's playing?

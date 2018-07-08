@@ -18,23 +18,6 @@ func main() {
 	cliRouter(os.Args[1:])
 }
 
-func createShowPlaylist(c *spotify.Client, artists []string) *spotify.FullPlaylist {
-	playlistName := strings.Join(artists, "/")
-	playlist := createPlaylist(c, playlistName)
-	for _, artist := range artists {
-
-		id := findArtistID(c, artist)
-		if id == nil {
-			debugprint("couldn't find an artist result for %s\n", artist)
-			continue
-		}
-
-		albums := getLatestAlbums(c, *id)
-		addAlbumsToPlaylist(c, playlist, albums)
-	}
-	return playlist
-}
-
 func findArtistID(c *spotify.Client, artist string) *spotify.ID {
 	page, err := c.Search(artist, spotify.SearchTypeArtist)
 	if err != nil {
@@ -62,6 +45,7 @@ func getAlbumTracks(c *spotify.Client, album *spotify.SimpleAlbum) []spotify.Sim
 	}
 	return tracks.Tracks
 }
+
 func tracksToIDs(tracks []spotify.SimpleTrack) (ids []spotify.ID) {
 	for _, track := range tracks {
 		ids = append(ids, track.ID)

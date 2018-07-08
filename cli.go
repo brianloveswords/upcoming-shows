@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/fatih/color"
+	"github.com/zmb3/spotify"
 )
 
 func usageAndExit() {
@@ -27,15 +30,20 @@ func cliRouter(args []string) {
 		mainPause()
 
 	case "skip":
+		fallthrough
 	case "next":
 		mainNext()
 
 	case "prev":
+		fallthrough
 	case "previous":
 		mainPrev()
 
 	case "playing":
 		playingRouter(args[1:])
+
+	case "playlist":
+		playlistRouter(args[1:])
 
 	default:
 		fmt.Fprintf(os.Stderr, "err: %s not a valid subcommand\n", subcmd)
@@ -56,6 +64,86 @@ func playingRouter(args []string) {
 		fmt.Fprintf(os.Stderr, "err: %s not a valid subcommand\n", subcmd)
 		usageAndExit()
 	}
+}
+
+func playlistRouter(args []string) {
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "err: missing command for playlist\n")
+		usageAndExit()
+	}
+
+	switch subcmd := args[0]; subcmd {
+	case "create":
+		playlistCreate(args[1:])
+	default:
+		fmt.Fprintf(os.Stderr, "err: %s not a valid subcommand\n", subcmd)
+		usageAndExit()
+	}
+}
+
+func playlistCreate(args []string) {
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "err: not enough arguments found for `create`\n")
+		usageAndExit()
+	}
+	switch playlistCreateParse(args) {
+	case "songkick-show":
+		fmt.Println("creating playlist from songkick show page")
+		playlistFromSongkickShowPage(args[0])
+		// create playlist from songkick show page
+	case "plain":
+		fmt.Println("creating plain playlist")
+		// create playlist by the name given
+	}
+}
+
+var reURL = regexp.MustCompile("^https?://")
+
+func playlistCreateParse(args []string) string {
+	input := args[0]
+	if reURL.MatchString(input) {
+		if strings.HasPrefix(input, "https://www.songkick.com/concerts/") {
+			return "songkick-show"
+		}
+		log.Fatalf("don't know what to do with url %s", input)
+	}
+
+	return "plain"
+}
+
+func playlistFromSongkickShowPage(url string) {
+	// TODO: option to open the resulting spotify playlist??
+
+	client := setupClient()
+	artists := artistsFromSongkickShowPage(url)
+	name := strings.Join(artists, "/")
+
+	fmt.Print("creating playlist ")
+	color.Cyan(name)
+
+	playlist := createPlaylist(client, name)
+	addArtistLatestAlbumsPlaylist(client, playlist, artists)
+
+	fmt.Println(playlist.URI)
+}
+
+func addArtistLatestAlbumsPlaylist(
+	client *spotify.Client,
+	playlist *spotify.FullPlaylist,
+	artists []string,
+) *spotify.FullPlaylist {
+	for _, artist := range artists {
+
+		id := findArtistID(client, artist)
+		if id == nil {
+			fmt.Fprintf(os.Stderr, "couldn't find an artist result for %s\n", artist)
+			continue
+		}
+
+		albums := getLatestAlbums(client, *id)
+		addAlbumsToPlaylist(client, playlist, albums)
+	}
+	return playlist
 }
 
 func playingFav() {
