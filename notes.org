@@ -96,6 +96,22 @@ logger.CmdOutput
 
 * command and flag parser
 
+// valid
+mixtape artist=chavez length=10
+mixtape length=10 artist=chavez
+mixtape n=10 artist=chavez           // n is alias for length
+mixtape n=10 length=25 artist=chavez // length will be 25
+mixtape artist                       // defaults to current artist
+mixtape track length=100             // current track
+
+// invalid
+mixtape length=10     // missing "artist" or "track"
+mixtape blargh        // unknown parameter "blargh"
+mixtape length="fuck" // fuck is not a number
+mixtape artist n=10   // ag missing "artist" or "track"
+mixtape artist track  // artist & track mutually exclusive
+
+
 CommandTree{
     Name: "spotify",
     Commands: []Command{
