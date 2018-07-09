@@ -96,14 +96,15 @@ type Subcommands []*Command
 func (c *Command) UsageAndExit() {
 	var visit func(c *Command, prefix string)
 	visit = func(c *Command, prefix string) {
-		glog.Log("%s -- %s", prefix+c.Name, c.Help)
+		fullname := prefix + c.Name
+		glog.Log("%s -- %s", color.GreenString(fullname), c.Help)
 
 		for _, param := range c.Params {
-			glog.Log("    %s :: %s", param.Name, param.Help)
+			glog.Log("    %s :: %s", color.BlueString(param.Name), param.Help)
 		}
 
 		for _, sub := range c.Commands {
-			visit(sub, prefix+c.Name+" ")
+			visit(sub, fullname+" ")
 		}
 	}
 	visit(c, "")

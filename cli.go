@@ -192,7 +192,7 @@ func cliRouter(args []string) {
 			Param{
 				Name:     "length",
 				Alias:    []string{"n"},
-				Help:     fmt.Sprintf("number of tracks to. defaults to %d", defaultMixtapeLength),
+				Help:     fmt.Sprintf("number of tracks to include. defaults to %d", defaultMixtapeLength),
 				Implicit: true,
 				ParseFn: func(val string) (err error) {
 					if val == "" {

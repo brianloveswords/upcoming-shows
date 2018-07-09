@@ -57,18 +57,6 @@ instead of making them copy and paste a link, maybe that would be better
 * DONE conditionally re-save the token, only if it's changed
 - saving is somewhat expensive because of scrypt, so we shouldn't do it all the dang time, let's just do it only if the token has changed.
 
-* command line flags
-- [ ] spotify auth clear
-- [ ] spotify auth debug
-
-- [X] spotify next
-- [X] spotify pause
-- [X] spotify play
-
-- [X] spotify playing fav
-
-- [ ] spotify playlist create ...
-
 * DONE printing
 think about:
 
@@ -92,7 +80,6 @@ logger.Verbose
 logger.Normal
 
 logger.CmdOutput
-
 
 * DONE command and flag parser
 
@@ -127,10 +114,25 @@ CommandTree{
     }
 }
 
+* command line flags
+- [ ] spotify auth clear
+- [ ] spotify auth debug
+
+- [X] spotify next
+- [X] spotify pause
+- [X] spotify play
+
+- [X] spotify playing fav
+
+- [ ] spotify playlist create ...
+
 * command line smoke tester
-cmd --smoke-test
+cmd.Lint(t)
 
 
 - check examples
+  - does it parse?
+  - if there are parameters, there should be examples
+  - is there an example for each parameter?
 - check documentation
 - check for unreachable cmds
