@@ -137,28 +137,30 @@ func cliRouter(args []string) {
 		Func: mixtapeCreate,
 		Examples: []Example{
 			Example{
-				`artist`,
-				"create a mixtape from artist currently playing",
+				Args: []string{`artist`},
+				Desc: "create a mixtape from artist currently playing",
 			},
 			Example{
-				`artist length=20`,
-				"create a mixtape of 20 tracks from artist currently playing",
+				Args: []string{`artist`, `length=20`},
+				Desc: "create a mixtape of 20 tracks from artist currently playing",
 			},
 			Example{
-				`artist="The Sword"`,
-				"create a mixtape of songs by The Sword",
+				Args: []string{`artist="The Sword"`},
+				Desc: "create a mixtape of songs by The Sword",
 			},
 			Example{
-				`artist=bill`,
-				"if the artist search is ambiguous, you will be prompted with selections",
+				Args: []string{`artist=bill`},
+				Desc: "if the artist search is ambiguous, you will be prompted with selections",
 			},
 			Example{
-				`track`,
-				"create mixtape of tracks recommended based on current playing track",
+				Args: []string{`track`},
+				Desc: "create mixtape of tracks recommended based on current playing track",
 			},
 			Example{
-				`artist=Chavez track # THIS WON'T WORK!`,
-				"note `artist` and `track` are mutually exclusive, don't include both",
+				Negative: true,
+				Args:     []string{`artist=Chavez`, `track`},
+				Comment:  "THIS WON'T WORK!",
+				Desc:     "note `artist` and `track` are mutually exclusive, don't include both",
 			},
 		},
 		Params: []Param{

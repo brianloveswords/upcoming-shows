@@ -19,7 +19,12 @@ type Command struct {
 	Func     func()
 }
 
-type Example [2]string
+type Example struct {
+	Args     []string
+	Comment  string
+	Desc     string
+	Negative bool
+}
 
 type Param struct {
 	Name     string
@@ -110,8 +115,17 @@ func (c *Command) ExamplesAndExit() {
 	visit = func(c *Command, prefix string) {
 		fullname := prefix + c.Name
 		for _, example := range c.Examples {
-			command := fullname + " " + example[0]
-			glog.Log("%s\n  %s\n", color.GreenString(command), example[1])
+			var crayon func(string, ...interface{}) string
+			var comment string
+			crayon = color.GreenString
+			if example.Negative {
+				crayon = color.RedString
+			}
+			if example.Comment != "" {
+				comment = color.YellowString(" # " + example.Comment)
+			}
+			command := fullname + " " + strings.Join(example.Args, " ")
+			glog.Log("%s%s\n  %s\n", crayon(command), comment, example.Desc)
 		}
 
 		for _, sub := range c.Commands {
