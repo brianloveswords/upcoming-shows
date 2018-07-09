@@ -66,6 +66,9 @@ func TestCommandSmokeTest(t *testing.T) {
 			&Command{
 				Name: "track-uri",
 				Help: "show the spotify URI for the current track",
+				Fn: func() {
+					fmt.Println("gonna show that track-uri")
+				},
 			},
 		},
 	}
@@ -82,4 +85,5 @@ func TestCommandSmokeTest(t *testing.T) {
 	}
 
 	fmt.Println(mainCmd.String())
+	mainCmd.Run([]string{"show", "track-uri"})
 }
