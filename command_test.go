@@ -2,10 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
-
-	"github.com/zmb3/spotify"
 )
 
 func TestCommandSmokeTest(t *testing.T) {
@@ -69,63 +66,8 @@ func TestCommandSmokeTest(t *testing.T) {
 			&Command{
 				Name: "track-uri",
 				Help: "show the spotify URI for the current track",
-				Fn: func() {
+				Func: func() {
 					fmt.Println("gonna show that track-uri")
-				},
-			},
-		},
-	}
-	var (
-		paramMixtapeArtist   string
-		paramMixtapeTrackID  spotify.ID
-		paramMixtapeLength   int
-		defaultMixtapeLength = 10
-	)
-	mixtapeCmds = Command{
-		Name: "mixtape",
-		Help: "create a mixtape",
-		Fn: func() {
-			fmt.Printf("artist is %s\n", paramMixtapeArtist)
-			fmt.Printf("track is %s\n", paramMixtapeTrackID)
-			fmt.Printf("length is %d\n", paramMixtapeLength)
-		},
-		Params: []Param{
-			Param{
-				Name:  "artist",
-				Alias: []string{"a"},
-				Help:  "the artist to base the mixtape on. If passed and not set, defaults to currently playing artist. Mutually exclusive with `track`",
-				ParseFn: func(val string) error {
-					if paramMixtapeTrackID != "" {
-						return fmt.Errorf("must pass track or artist, but not both")
-					}
-					paramMixtapeArtist = val
-					return nil
-				},
-			},
-			Param{
-				Name:  "track",
-				Alias: []string{"t"},
-				Help:  "the track ID to base the mixtape on. If passed and not set, defaults to currently playing artist. Mutually exclusive with `artist`",
-				ParseFn: func(val string) error {
-					if paramMixtapeArtist != "" {
-						return fmt.Errorf("must pass track or artist, but not both")
-					}
-					paramMixtapeTrackID = spotify.ID(val)
-					return nil
-				},
-			},
-			Param{
-				Name:     "length",
-				Alias:    []string{"n"},
-				Help:     fmt.Sprintf("number of tracks to. defaults to %d", defaultMixtapeLength),
-				Implicit: true,
-				ParseFn: func(val string) (err error) {
-					if val == "" {
-						paramMixtapeLength = defaultMixtapeLength
-						return nil
-					}
-					paramMixtapeLength, err = strconv.Atoi(val)
-					return err
 				},
 			},
 		},

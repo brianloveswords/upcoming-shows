@@ -70,6 +70,12 @@ func (l *Logger) Log(format string, v ...interface{}) {
 	}
 	l.stderrPrint(format, v...)
 }
+func (l *Logger) Prompt(format string, v ...interface{}) {
+	if l.Level < LoggerLevelNormal {
+		return
+	}
+	fmt.Fprintf(l.Stderr, format+": ", v...)
+}
 func (l *Logger) stderrPrint(format string, v ...interface{}) {
 	fmt.Fprintf(l.Stderr, format+"\n", v...)
 }

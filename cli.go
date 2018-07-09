@@ -1,14 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/zmb3/spotify"
+)
+
+var (
+	paramMixtapeArtist   *string
+	paramMixtapeTrackID  *spotify.ID
+	paramMixtapeLength   int
+	defaultMixtapeLength = 10
 )
 
 var glog = NewLogger()
@@ -46,86 +55,146 @@ func cliRouter(args []string) {
 		usageAndExit()
 	}
 
-	switch subcmd := args[0]; subcmd {
-	case "play":
-		mainPlay()
+	var (
+		mainCmd    Command
+		mixtapeCmd Command
+		showCmd    Command
+	)
 
-	case "pause":
-		mainPause()
+	mainCmd = Command{
+		Name: "spotify",
+		Help: "control spotify from the commandline",
+		Commands: Subcommands{
+			&Command{
+				Name: "play",
+				Help: "play the current song",
+				Func: mainPlay,
+			},
+			&Command{
+				Name: "pause",
+				Help: "pause the current song",
+				Func: mainPause,
+			},
+			&Command{
+				Name:  "skip",
+				Help:  "skip the current song",
+				Alias: []string{"next"},
+				Func:  mainNext,
+			},
+			&Command{
+				Name:  "prev",
+				Help:  "go back to the last song",
+				Alias: []string{"back"},
+				Func:  mainPrev,
+			},
+			&Command{
+				Name: "fav",
+				Help: "add the current song to your library",
+				Func: mainFav,
+			},
+			&showCmd,
+			&mixtapeCmd,
+		},
+	}
 
-	case "skip":
-		fallthrough
-	case "next":
-		mainNext()
+	showCmd = Command{
+		Name: "show",
+		Help: "show the current playing track. has subcommands",
+		Func: showShow,
+		Commands: Subcommands{
+			&Command{
+				Name: "artist",
+				Help: "show the artist of the current track",
+				Func: showArtist,
+			},
+			&Command{
+				Name: "artist-id",
+				Help: "show the spotify artist ID of the current track",
+				Func: showArtistID,
+			},
+			&Command{
+				Name: "artist-uri",
+				Help: "show the spotify URI for the artist of the current track",
+				Func: showArtistURI,
+			},
+			&Command{
+				Name: "track",
+				Help: "show the title for the current track",
+				Func: showTrack,
+			},
+			&Command{
+				Name: "track-id",
+				Help: "show the track ID of the current track",
+				Func: showTrackID,
+			},
+			&Command{
+				Name: "track-uri",
+				Help: "show the spotify URI for the current track",
+				Func: showTrackURI,
+			},
+		},
+	}
 
-	case "prev":
-		fallthrough
-	case "previous":
-		mainPrev()
+	mixtapeCmd = Command{
+		Name: "mixtape",
+		Help: "create a mixtape",
+		Func: mixtapeCreate,
+		Params: []Param{
+			Param{
+				Name:  "artist",
+				Alias: []string{"a"},
+				Help:  "the artist to base the mixtape on. If passed and not set, defaults to currently playing artist. Mutually exclusive with `track`",
+				ParseFn: func(val string) error {
+					if paramMixtapeTrackID != nil {
+						return fmt.Errorf("must pass track or artist, but not both")
+					}
+					paramMixtapeArtist = &val
+					return nil
+				},
+			},
+			Param{
+				Name:  "track",
+				Alias: []string{"t"},
+				Help:  "the track ID to base the mixtape on. If passed and not set, defaults to currently playing artist. Mutually exclusive with `artist`",
+				ParseFn: func(val string) error {
+					if paramMixtapeArtist != nil {
+						return fmt.Errorf("must pass track or artist, but not both")
+					}
+					trackID := spotify.ID(val)
+					paramMixtapeTrackID = &trackID
+					return nil
+				},
+			},
+			Param{
+				Name:     "length",
+				Alias:    []string{"n"},
+				Help:     fmt.Sprintf("number of tracks to. defaults to %d", defaultMixtapeLength),
+				Implicit: true,
+				ParseFn: func(val string) (err error) {
+					if val == "" {
+						paramMixtapeLength = defaultMixtapeLength
+						return nil
+					}
+					paramMixtapeLength, err = strconv.Atoi(val)
+					return err
+				},
+			},
+		},
+	}
 
-	case "playing":
-		playingRouter(args[1:])
-
-	case "mixtape":
-		mixtapeRouter(args[1:])
-
-	case "playlist":
-		playlistRouter(args[1:])
-
-	default:
-		glog.Log("err: %s not a valid subcommand", subcmd)
-		usageAndExit()
+	err := mainCmd.Run(args)
+	if err != nil {
+		glog.Fatal("%s", err)
 	}
 }
 
-func playingRouter(args []string) {
-	if len(args) == 0 {
-		glog.Log("err: missing command for playing")
-		usageAndExit()
+func mustGetCurrentlyPlaying() *spotify.FullTrack {
+	client := setupClient()
+	playing, err := client.PlayerCurrentlyPlaying()
+	if err != nil {
+		glog.Fatal("could not get currently playing: %s", err)
 	}
-
-	switch subcmd := args[0]; subcmd {
-	case "fav":
-		playingFav()
-	case "show":
-		playingShow(args[1:])
-	default:
-		glog.Log("err: %s not a valid subcommand", subcmd)
-		usageAndExit()
-	}
-}
-
-func playlistRouter(args []string) {
-	if len(args) == 0 {
-		glog.Log("err: missing command for playlist")
-		usageAndExit()
-	}
-
-	switch subcmd := args[0]; subcmd {
-	case "create":
-		playlistCreate(args[1:])
-	default:
-		glog.Log("err: %s not a valid subcommand", subcmd)
-		usageAndExit()
-	}
-}
-
-func mixtapeRouter(args []string) {
-	if len(args) == 0 {
-		glog.Log("err: missing command for mixtape")
-		usageAndExit()
-	}
-
-	switch subcmd := args[0]; subcmd {
-	case "current-artist":
-		mixtapeByCurrentArtist()
-	case "by-artist-id":
-		mixtapeByArtistID(args[1])
-	default:
-		glog.Log("mixtape: %s not a valid subcommand", subcmd)
-		usageAndExit()
-	}
-
+	return playing.Item
 }
 
 func playlistCreate(args []string) {
@@ -145,63 +214,6 @@ func playlistCreate(args []string) {
 
 var reURL = regexp.MustCompile("^https?://")
 
-func mixtapeByCurrentArtist() {
-	defer glog.Enter("mixtapeByCurrentArtist")()
-	client := setupClient()
-
-	playing, err := client.PlayerCurrentlyPlaying()
-	if err != nil {
-		glog.Fatal("could not get currently playing: %s", err)
-	}
-	track := playing.Item
-	mixtapeByArtistID(string(track.Artists[0].ID))
-}
-
-func mixtapeByArtistID(artistID string) {
-	defer glog.Enter("mixtapeByArtistID")()
-	client := setupClient()
-
-	artist, err := client.GetArtist(spotify.ID(artistID))
-	if err != nil {
-		glog.Fatal("couldn't look up artist with ID %s: %s", artistID, err)
-	}
-
-	alltracks, err := getAllTracksByArtist(client, artistID)
-	if err != nil {
-		glog.Fatal("could not get tracks from artist with ID %s: %s", artistID, err)
-	}
-
-	tracks := randomTracks(alltracks, 10)
-	if len(tracks) == 0 {
-		glog.Fatal("didn't find any tracks for artist with ID %s", artistID)
-	}
-
-	user, err := client.CurrentUser()
-	if err != nil {
-		glog.Fatal("couldn't access current user: %s", err)
-	}
-
-	playlist, err := client.CreatePlaylistForUser(user.ID, "{mixtape} "+artist.Name, true)
-	if err != nil {
-		glog.Fatal("couldn't create playlist for user %s: %s", user.ID, err)
-	}
-
-	for _, track := range tracks {
-		glog.Log("adding %s", color.CyanString(songAttributionFromSimpleTrack(&track)))
-	}
-
-	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, tracksToIDs(tracks)...)
-	if err != nil {
-		glog.Fatal("couldn't add tracks to playlist %s for user %s: %s",
-			color.BlueString(playlist.Name),
-			color.GreenString(user.ID),
-			err,
-		)
-	}
-	glog.Log("Created playlist %s", color.BlueString(playlist.Name))
-	glog.CmdOutput("%s", playlist.URI)
-}
-
 func createPlaylist(client *spotify.Client, name string) *spotify.FullPlaylist {
 	user, err := client.CurrentUser()
 	if err != nil {
@@ -216,7 +228,7 @@ func createPlaylist(client *spotify.Client, name string) *spotify.FullPlaylist {
 	return playlist
 }
 
-func getAllTracksByArtist(client *spotify.Client, artistID string) (alltracks []spotify.SimpleTrack, err error) {
+func getAllTracksByArtist(client *spotify.Client, artistID spotify.ID) (alltracks []spotify.SimpleTrack, err error) {
 	defer glog.Enter("getAllTracksByArtist")()
 
 	albums, err := getAllAlbumsByArtist(client, artistID)
@@ -236,7 +248,7 @@ func getAllTracksByArtist(client *spotify.Client, artistID string) (alltracks []
 			// so we don't want to add all the songs on the record, just
 			// the ones by the artist we're lookin for
 			for _, artist := range track.Artists {
-				if artist.ID == spotify.ID(artistID) {
+				if artist.ID == artistID {
 					alltracks = append(alltracks, track)
 				}
 			}
@@ -247,7 +259,7 @@ func getAllTracksByArtist(client *spotify.Client, artistID string) (alltracks []
 	return alltracks, nil
 }
 
-func getAllAlbumsByArtist(client *spotify.Client, artistID string) ([]spotify.SimpleAlbum, error) {
+func getAllAlbumsByArtist(client *spotify.Client, artistID spotify.ID) ([]spotify.SimpleAlbum, error) {
 	// TODO: ensure artistID looks like an artistID
 
 	// TODO: some artists may have more than 50 albums but fuck them
@@ -256,7 +268,7 @@ func getAllAlbumsByArtist(client *spotify.Client, artistID string) ([]spotify.Si
 	// going to get more than 50 results and we don't wanna deal with
 	// that right now
 	albumType := spotify.AlbumTypeSingle | spotify.AlbumTypeAlbum
-	page, err := client.GetArtistAlbumsOpt(spotify.ID(artistID), &spotify.Options{
+	page, err := client.GetArtistAlbumsOpt(artistID, &spotify.Options{
 		Limit: &limit,
 	}, &albumType)
 	if err != nil {
@@ -346,45 +358,8 @@ func addArtistLatestAlbumsPlaylist(
 	return playlist
 }
 
-func playingShow(args []string) {
-	defer glog.Enter("playingFav")()
-	client := setupClient()
-	playing, err := client.PlayerCurrentlyPlaying()
-	if err != nil {
-		glog.Fatal("could not get currently playing: %s", err)
-	}
-	track := playing.Item
-
-	if len(args) == 0 {
-		name := songAttributionFromTrack(track)
-		glog.Log("currently playing %s", color.CyanString(name))
-		return
-	}
-	switch args[0] {
-	case "help":
-		fallthrough
-	case "--help":
-		glog.Fatal("TODO: implement help")
-	case "artist":
-		glog.CmdOutput("%s", track.Artists[0].Name)
-	case "artist-id":
-		glog.CmdOutput("%s", track.Artists[0].ID)
-	case "artist-uri":
-		glog.CmdOutput("%s", track.Artists[0].URI)
-	case "track":
-		glog.CmdOutput("%s", track.Name)
-	case "track-id":
-		glog.CmdOutput("%s", track.ID)
-	case "track-uri":
-		glog.CmdOutput("%s", track.URI)
-	default:
-		glog.Debug("fell through switch")
-		glog.Fatal("I don't understand argument %s", color.RedString(args[0]))
-	}
-}
-
-func playingFav() {
-	defer glog.Enter("playingFav")()
+func mainFav() {
+	defer glog.Enter("mainFav")()
 	client := setupClient()
 	playing, err := client.PlayerCurrentlyPlaying()
 	if err != nil {
@@ -419,17 +394,10 @@ func mainPause() {
 	}
 }
 
-func logCurrentTrack(client *spotify.Client, prefix string) {
-	playing, _ := client.PlayerCurrentlyPlaying()
-	if playing != nil {
-		song := songAttributionFromTrack(playing.Item)
-		glog.Log("%s %s", prefix, color.CyanString(song))
-	}
-}
-
 func mainNext() {
 	defer glog.Enter("mainNext")()
 	client := setupClient()
+	logCurrentTrack(client, "skipping")
 	if err := client.Next(); err != nil {
 		glog.Fatal("couldn't skip track: ", err)
 	}
@@ -439,5 +407,14 @@ func mainPrev() {
 	client := setupClient()
 	if err := client.Previous(); err != nil {
 		glog.Fatal("couldn't go back: ", err)
+	}
+	logCurrentTrack(client, "going back to")
+}
+
+func logCurrentTrack(client *spotify.Client, prefix string) {
+	playing, _ := client.PlayerCurrentlyPlaying()
+	if playing != nil {
+		song := songAttributionFromTrack(playing.Item)
+		glog.Log("%s %s", prefix, color.CyanString(song))
 	}
 }

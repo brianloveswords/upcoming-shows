@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -11,7 +12,7 @@ type Command struct {
 	Alias    []string
 	Commands []*Command
 	Params   []Param
-	Fn       func()
+	Func     func()
 }
 
 type Param struct {
@@ -82,7 +83,6 @@ func (p *Param) Consume(params []string) ([]string, error) {
 type Subcommands []*Command
 
 func (c *Command) Run(args []string) (err error) {
-	fmt.Println(args)
 	var visit func(remaining []string, c *Command) error
 	visit = func(remaining []string, c *Command) error {
 		// fmt.Printf("visiting %s, %s\n", c.Name, remaining)
@@ -90,16 +90,16 @@ func (c *Command) Run(args []string) (err error) {
 		// endpath 1: out of arguments and the command has a
 		// corresponding function
 		if len(remaining) == 0 {
-			if c.Fn == nil {
+			if c.Func == nil {
 				return fmt.Errorf("%s", c.Help)
 			}
-			c.Fn()
+			c.Func()
 			return nil
 		}
 		// endpath 2: out of children, has corresponding argument, and
 		// param parser says everything's golden
 		if len(c.Commands) == 0 {
-			if c.Fn == nil {
+			if c.Func == nil {
 				return fmt.Errorf("%s", c.Help)
 			}
 			for _, param := range c.Params {
@@ -113,21 +113,26 @@ func (c *Command) Run(args []string) (err error) {
 				return fmt.Errorf("unknown params remaining: %s", remaining)
 			}
 
-			c.Fn()
+			c.Func()
 			return nil
 		}
 
 		for _, sub := range c.Commands {
 			// fmt.Printf("comparing %s to %s\n", sub.Name, args[0])
-
-			if sub.Name == remaining[0] {
-				return visit(remaining[1:], sub)
+			names := sub.Alias
+			names = append(names, sub.Name)
+			for _, name := range names {
+				if name == remaining[0] {
+					return visit(remaining[1:], sub)
+				}
 			}
 		}
-		return fmt.Errorf("command not found")
+		return ErrCommandNotFound
 	}
 	return visit(args, c)
 }
+
+var ErrCommandNotFound = errors.New("command not found")
 
 func (c *Command) String() string {
 	var results []string

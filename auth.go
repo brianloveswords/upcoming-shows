@@ -28,6 +28,7 @@ var permissions = []string{
 // these will be set at build time from env SPOTIFY_ID and SPOTIFY_SECRET
 var clientID string
 var clientSecret string
+var client *spotify.Client
 
 var tokenPath = path.Join(os.Getenv("HOME"), ".upcoming-shows-token")
 
@@ -38,7 +39,7 @@ func loadAuthInfo() (id, secret string) {
 	return id, secret
 }
 
-func setupClient() (client *spotify.Client) {
+func setupClient() *spotify.Client {
 	defer glog.Enter("setupClient")()
 
 	// the redirect URL must be an exact match of a URL you've registered for your application
