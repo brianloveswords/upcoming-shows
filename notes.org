@@ -94,7 +94,7 @@ logger.Normal
 logger.CmdOutput
 
 
-* command and flag parser
+* DONE command and flag parser
 
 // valid
 mixtape artist=chavez length=10
@@ -126,3 +126,11 @@ CommandTree{
         }
     }
 }
+
+* command line smoke tester
+cmd --smoke-test
+
+
+- check examples
+- check documentation
+- check for unreachable cmds

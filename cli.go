@@ -43,17 +43,13 @@ func setLogLevel() {
 	}
 }
 
-func usageAndExit() {
-	// TODO: fill this out
-	glog.Fatal("spotify usage goes here")
-}
+// func usageAndExit() {
+// 	// TODO: fill this out
+// 	glog.Fatal("spotify usage goes here")
+// }
 
 func cliRouter(args []string) {
 	setLogLevel()
-
-	if len(args) == 0 {
-		usageAndExit()
-	}
 
 	var (
 		mainCmd    Command
@@ -109,12 +105,12 @@ func cliRouter(args []string) {
 			},
 			&Command{
 				Name: "artist-id",
-				Help: "show the spotify artist ID of the current track",
+				Help: "show the spotify artist ID of current track",
 				Func: showArtistID,
 			},
 			&Command{
 				Name: "artist-uri",
-				Help: "show the spotify URI for the artist of the current track",
+				Help: "show the spotify URI for the artist of current track",
 				Func: showArtistURI,
 			},
 			&Command{
@@ -139,11 +135,37 @@ func cliRouter(args []string) {
 		Name: "mixtape",
 		Help: "create a mixtape",
 		Func: mixtapeCreate,
+		Examples: []Example{
+			Example{
+				`artist`,
+				"create a mixtape from artist currently playing",
+			},
+			Example{
+				`artist length=20`,
+				"create a mixtape of 20 tracks from artist currently playing",
+			},
+			Example{
+				`artist="The Sword"`,
+				"create a mixtape of songs by The Sword",
+			},
+			Example{
+				`artist=bill`,
+				"if the artist search is ambiguous, you will be prompted with selections",
+			},
+			Example{
+				`track`,
+				"create mixtape of tracks recommended based on current playing track",
+			},
+			Example{
+				`artist=Chavez track # THIS WON'T WORK!`,
+				"note `artist` and `track` are mutually exclusive, don't include both",
+			},
+		},
 		Params: []Param{
 			Param{
 				Name:  "artist",
 				Alias: []string{"a"},
-				Help:  "the artist to base the mixtape on. If passed and not set, defaults to currently playing artist. Mutually exclusive with `track`",
+				Help:  "artist to base mixtape on. pass empty artist to use current playing",
 				ParseFn: func(val string) error {
 					if paramMixtapeTrackID != nil {
 						return fmt.Errorf("must pass track or artist, but not both")
@@ -155,7 +177,7 @@ func cliRouter(args []string) {
 			Param{
 				Name:  "track",
 				Alias: []string{"t"},
-				Help:  "the track ID to base the mixtape on. If passed and not set, defaults to currently playing artist. Mutually exclusive with `artist`",
+				Help:  "track ID to base mixtape on. pass empty track to use current playing",
 				ParseFn: func(val string) error {
 					if paramMixtapeArtist != nil {
 						return fmt.Errorf("must pass track or artist, but not both")
@@ -176,6 +198,9 @@ func cliRouter(args []string) {
 						return nil
 					}
 					paramMixtapeLength, err = strconv.Atoi(val)
+					if paramMixtapeLength < 1 || paramMixtapeLength > 50 {
+						return fmt.Errorf("mixtape length must be between 1 and 50")
+					}
 					return err
 				},
 			},
@@ -197,20 +222,20 @@ func mustGetCurrentlyPlaying() *spotify.FullTrack {
 	return playing.Item
 }
 
-func playlistCreate(args []string) {
-	defer glog.Enter("playlistCreate")()
+// func playlistCreate(args []string) {
+// 	defer glog.Enter("playlistCreate")()
 
-	if len(args) == 0 {
-		glog.Log("err: not enough arguments found for `create`")
-		usageAndExit()
-	}
-	switch playlistCreateParse(args) {
-	case "songkick-show":
-		playlistFromSongkickShowPage(args[0])
-	case "plain":
-		glog.Log("TODO: create plain playlist")
-	}
-}
+// 	if len(args) == 0 {
+// 		glog.Log("err: not enough arguments found for `create`")
+// 		usageAndExit()
+// 	}
+// 	switch playlistCreateParse(args) {
+// 	case "songkick-show":
+// 		playlistFromSongkickShowPage(args[0])
+// 	case "plain":
+// 		glog.Log("TODO: create plain playlist")
+// 	}
+// }
 
 var reURL = regexp.MustCompile("^https?://")
 

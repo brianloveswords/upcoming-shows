@@ -27,8 +27,65 @@ func mixtapeCreate() {
 	}
 
 	if paramMixtapeTrackID != nil {
-		glog.Fatal("need to implement by track name")
+		if *paramMixtapeTrackID == spotify.ID("") {
+			mixtapeByCurrentTrack(paramMixtapeLength)
+			return
+		}
+		mixtapeByTrackID(*paramMixtapeTrackID, paramMixtapeLength)
+		return
 	}
+}
+
+func mixtapeByCurrentTrack(length int) {
+	track := mustGetCurrentlyPlaying()
+	mixtapeByTrackID(track.ID, length)
+}
+
+func mixtapeByTrackID(trackID spotify.ID, length int) {
+	client := setupClient()
+
+	seedTrack, err := client.GetTrack(trackID)
+	if err != nil {
+		glog.Fatal("couldn't find track for trackID %s: %s", trackID, err)
+	}
+	trackname := songAttributionFromTrack(seedTrack)
+	glog.Log("making mixtape with seed %s...", color.YellowString(trackname))
+
+	seeds := spotify.Seeds{
+		Tracks: []spotify.ID{trackID},
+	}
+	recommendations, err := client.GetRecommendations(seeds, spotify.NewTrackAttributes(), &spotify.Options{
+		Limit: &length,
+	})
+	if err != nil {
+		glog.Fatal("couldn't get recommendations: %s", err)
+	}
+	tracks := recommendations.Tracks
+
+	user, err := client.CurrentUser()
+	if err != nil {
+		glog.Fatal("couldn't access current user: %s", err)
+	}
+
+	playlist, err := client.CreatePlaylistForUser(user.ID, "{mixtape} "+trackname, true)
+	if err != nil {
+		glog.Fatal("couldn't create playlist for user %s: %s", user.ID, err)
+	}
+
+	for _, track := range tracks {
+		glog.Log("adding %s", color.CyanString(songAttributionFromSimpleTrack(&track)))
+	}
+
+	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, tracksToIDs(tracks)...)
+	if err != nil {
+		glog.Fatal("couldn't add tracks to playlist %s for user %s: %s",
+			color.BlueString(playlist.Name),
+			color.GreenString(user.ID),
+			err,
+		)
+	}
+	glog.Log("Created playlist %s", color.BlueString(playlist.Name))
+	glog.CmdOutput("%s", playlist.URI)
 }
 
 func mixtapeByArtist(artist string, length int) {
@@ -145,19 +202,4 @@ func mixtapeByArtistID(artistID spotify.ID, length int) {
 	}
 	glog.Log("Created playlist %s", color.BlueString(playlist.Name))
 	glog.CmdOutput("%s", playlist.URI)
-}
-
-func playlistRouter(args []string) {
-	if len(args) == 0 {
-		glog.Log("err: missing command for playlist")
-		usageAndExit()
-	}
-
-	switch subcmd := args[0]; subcmd {
-	case "create":
-		playlistCreate(args[1:])
-	default:
-		glog.Log("err: %s not a valid subcommand", subcmd)
-		usageAndExit()
-	}
 }

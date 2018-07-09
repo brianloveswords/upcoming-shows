@@ -3,7 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 type Command struct {
@@ -12,8 +15,11 @@ type Command struct {
 	Alias    []string
 	Commands []*Command
 	Params   []Param
+	Examples []Example
 	Func     func()
 }
+
+type Example [2]string
 
 type Param struct {
 	Name     string
@@ -82,7 +88,42 @@ func (p *Param) Consume(params []string) ([]string, error) {
 
 type Subcommands []*Command
 
+func (c *Command) UsageAndExit() {
+	var visit func(c *Command, prefix string)
+	visit = func(c *Command, prefix string) {
+		glog.Log("%s -- %s", prefix+c.Name, c.Help)
+
+		for _, param := range c.Params {
+			glog.Log("    %s :: %s", param.Name, param.Help)
+		}
+
+		for _, sub := range c.Commands {
+			visit(sub, prefix+c.Name+" ")
+		}
+	}
+	visit(c, "")
+	os.Exit(1)
+}
+
+func (c *Command) ExamplesAndExit() {
+	var visit func(c *Command, prefix string)
+	visit = func(c *Command, prefix string) {
+		fullname := prefix + c.Name
+		for _, example := range c.Examples {
+			command := fullname + " " + example[0]
+			glog.Log("%s\n  %s\n", color.GreenString(command), example[1])
+		}
+
+		for _, sub := range c.Commands {
+			visit(sub, fullname+" ")
+		}
+	}
+	visit(c, "")
+	os.Exit(1)
+}
+
 func (c *Command) Run(args []string) (err error) {
+	// var spent []string
 	var visit func(remaining []string, c *Command) error
 	visit = func(remaining []string, c *Command) error {
 		// fmt.Printf("visiting %s, %s\n", c.Name, remaining)
@@ -91,12 +132,27 @@ func (c *Command) Run(args []string) (err error) {
 		// corresponding function
 		if len(remaining) == 0 {
 			if c.Func == nil {
-				return fmt.Errorf("%s", c.Help)
+
+				// if this subcommand is merely the parent of further
+				// subcommands and doesn't have a function, show the
+				// usage and bounnnnnnce
+				c.UsageAndExit()
 			}
 			c.Func()
 			return nil
 		}
-		// endpath 2: out of children, has corresponding argument, and
+
+		// endpath 2: help is in the way
+		if remaining[0] == "--help" {
+			c.UsageAndExit()
+		}
+
+		// endpath 3: examples are in the way
+		if remaining[0] == "--examples" {
+			c.ExamplesAndExit()
+		}
+
+		// endpath 4: out of children, has corresponding argument, and
 		// param parser says everything's golden
 		if len(c.Commands) == 0 {
 			if c.Func == nil {
