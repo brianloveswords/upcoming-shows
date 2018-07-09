@@ -69,7 +69,7 @@ instead of making them copy and paste a link, maybe that would be better
 
 - [ ] spotify playlist create ...
 
-* printing
+* DONE printing
 think about:
 
 - which functions should print at all, and which are "internal" and should shut the fuck up and just return different types of errors?
@@ -93,5 +93,20 @@ logger.Normal
 
 logger.CmdOutput
 
-* Error handling
-- what happens if you try to fav a track and nothing's playing?
+
+* command and flag parser
+
+CommandTree{
+    Name: "spotify",
+    Commands: []Command{
+        Command{
+          Name:    "next",
+          Aliases: []string{"skip"},
+          Help:    "skip to the next track",
+        }
+        Command{
+          Name:    "play",
+          Help:    "play the current track",
+        }
+    }
+}

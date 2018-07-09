@@ -27,6 +27,7 @@ func TestLoggerVisual(t *testing.T) {
 
 	level1 = func() {
 		defer logger.Enter("level1")()
+
 		logger.Debug("in level1")
 		logger.Debug("before level2")
 		level2()
