@@ -103,17 +103,8 @@ func getCurrentArtistID(client *spotify.Client) spotify.ID {
 	}
 	artist := artistFromTrack(playing.Item)
 	id := playing.Item.Artists[0].ID
-	debugprint("%s %s\n", artist, id)
+	glog.Debug("%s %s", artist, id)
 	return id
-}
-
-func createPlaylist(client *spotify.Client, name string) *spotify.FullPlaylist {
-	user, _ := client.CurrentUser()
-	playlist, err := client.CreatePlaylistForUser(user.ID, name, true)
-	if err != nil {
-		panic(err)
-	}
-	return playlist
 }
 
 func songAttributionFromTrack(track *spotify.FullTrack) string {
@@ -122,6 +113,18 @@ func songAttributionFromTrack(track *spotify.FullTrack) string {
 }
 
 func artistFromTrack(track *spotify.FullTrack) string {
+	var artists []string
+	for _, artist := range track.Artists {
+		artists = append(artists, artist.Name)
+	}
+	return strings.Join(artists, ", ")
+}
+func songAttributionFromSimpleTrack(track *spotify.SimpleTrack) string {
+	song := track.Name
+	return fmt.Sprintf("%s - %s", artistFromSimpleTrack(track), song)
+}
+
+func artistFromSimpleTrack(track *spotify.SimpleTrack) string {
 	var artists []string
 	for _, artist := range track.Artists {
 		artists = append(artists, artist.Name)

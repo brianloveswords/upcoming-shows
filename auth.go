@@ -44,15 +44,6 @@ func setupClient() (client *spotify.Client) {
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
 	var tok *oauth2.Token
-	defer func() {
-		expiry := tok.Expiry
-		if newtok, err := client.Token(); err == nil {
-			if newtok.Expiry.After(expiry) {
-				debugprint("saving new token: %v", tok.Expiry)
-				saveToken(tok, tokenPath)
-			}
-		}
-	}()
 
 	auth := spotify.NewAuthenticator(redirectURL, permissions...)
 
@@ -63,6 +54,16 @@ func setupClient() (client *spotify.Client) {
 	tok = loadToken(tokenPath)
 
 	if tok != nil {
+		expiry := tok.Expiry
+		defer func() {
+			if newtok, err := client.Token(); err == nil {
+				if newtok.Expiry.After(expiry) {
+					glog.Debug("saving new token: %v", tok.Expiry)
+					saveToken(tok, tokenPath)
+				}
+			}
+		}()
+
 		c := auth.NewClient(tok)
 		client = &c
 		godbc.Ensure(client != nil, "failed to create client")

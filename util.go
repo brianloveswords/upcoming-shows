@@ -6,23 +6,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 
 	"github.com/lpabon/godbc"
 )
 
-var dbglog = log.New(os.Stderr, "debug: ", 0)
-
-func debugprint(format string, v ...interface{}) {
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		dbglog.Printf(format, v...)
-	}
-}
 func mustGet(v string, key string) string {
 	if envVal := os.Getenv(key); envVal != "" {
-		debugprint("overriding from %s", key)
+		glog.Extreme("overriding from %s", key)
 		v = envVal
 	}
 	godbc.Ensure(v != "", fmt.Sprintf("couldn't ensure value with key %s", key))
@@ -46,7 +38,7 @@ func mustCreate(filename string) *os.File {
 func loadIntMap(name string) (intmap map[string]int) {
 	f, err := os.Open(name)
 	if err != nil {
-		debugprint("couldn't open intmap data from file '%s'\n", name)
+		glog.Debug("couldn't open intmap data from file '%s'", name)
 		return make(map[string]int)
 	}
 	defer f.Close()
@@ -71,7 +63,7 @@ func openURL(url string) {
 	cmd := exec.Command("open", url)
 	if err := cmd.Run(); err != nil {
 		// fall back to just printing it
-		fmt.Printf("go here and authenticate\n: %s\n", url)
+		fmt.Printf("go here\n: %s\n", url)
 		return
 	}
 }

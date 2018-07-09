@@ -1,9 +1,11 @@
 package main
 
 import (
+	"math/rand"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/zmb3/spotify"
@@ -64,6 +66,9 @@ func cliRouter(args []string) {
 	case "playing":
 		playingRouter(args[1:])
 
+	case "mixtape":
+		mixtapeRouter(args[1:])
+
 	case "playlist":
 		playlistRouter(args[1:])
 
@@ -105,6 +110,24 @@ func playlistRouter(args []string) {
 	}
 }
 
+func mixtapeRouter(args []string) {
+	if len(args) == 0 {
+		glog.Log("err: missing command for mixtape")
+		usageAndExit()
+	}
+
+	switch subcmd := args[0]; subcmd {
+	case "current-artist":
+		mixtapeByCurrentArtist()
+	case "by-artist-id":
+		mixtapeByArtistID(args[1])
+	default:
+		glog.Log("mixtape: %s not a valid subcommand", subcmd)
+		usageAndExit()
+	}
+
+}
+
 func playlistCreate(args []string) {
 	defer glog.Enter("playlistCreate")()
 
@@ -115,14 +138,158 @@ func playlistCreate(args []string) {
 	switch playlistCreateParse(args) {
 	case "songkick-show":
 		playlistFromSongkickShowPage(args[0])
-		// create playlist from songkick show page
 	case "plain":
 		glog.Log("TODO: create plain playlist")
-		// create playlist by the name given
 	}
 }
 
 var reURL = regexp.MustCompile("^https?://")
+
+func mixtapeByCurrentArtist() {
+	defer glog.Enter("mixtapeByCurrentArtist")()
+	client := setupClient()
+
+	playing, err := client.PlayerCurrentlyPlaying()
+	if err != nil {
+		glog.Fatal("could not get currently playing: %s", err)
+	}
+	track := playing.Item
+	mixtapeByArtistID(string(track.Artists[0].ID))
+}
+
+func mixtapeByArtistID(artistID string) {
+	defer glog.Enter("mixtapeByArtistID")()
+	client := setupClient()
+
+	artist, err := client.GetArtist(spotify.ID(artistID))
+	if err != nil {
+		glog.Fatal("couldn't look up artist with ID %s: %s", artistID, err)
+	}
+
+	alltracks, err := getAllTracksByArtist(client, artistID)
+	if err != nil {
+		glog.Fatal("could not get tracks from artist with ID %s: %s", artistID, err)
+	}
+
+	tracks := randomTracks(alltracks, 10)
+	if len(tracks) == 0 {
+		glog.Fatal("didn't find any tracks for artist with ID %s", artistID)
+	}
+
+	user, err := client.CurrentUser()
+	if err != nil {
+		glog.Fatal("couldn't access current user: %s", err)
+	}
+
+	playlist, err := client.CreatePlaylistForUser(user.ID, "{mixtape} "+artist.Name, true)
+	if err != nil {
+		glog.Fatal("couldn't create playlist for user %s: %s", user.ID, err)
+	}
+
+	for _, track := range tracks {
+		glog.Log("adding %s", color.CyanString(songAttributionFromSimpleTrack(&track)))
+	}
+
+	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, tracksToIDs(tracks)...)
+	if err != nil {
+		glog.Fatal("couldn't add tracks to playlist %s for user %s: %s",
+			color.BlueString(playlist.Name),
+			color.GreenString(user.ID),
+			err,
+		)
+	}
+	glog.Log("Created playlist %s", color.BlueString(playlist.Name))
+	glog.CmdOutput("%s", playlist.URI)
+}
+
+func createPlaylist(client *spotify.Client, name string) *spotify.FullPlaylist {
+	user, err := client.CurrentUser()
+	if err != nil {
+		glog.Fatal("couldn't access current user: %s", err)
+	}
+
+	playlist, err := client.CreatePlaylistForUser(user.ID, name, true)
+	if err != nil {
+		glog.Fatal("couldn't create playlist for user %s: %s", user.ID, err)
+	}
+
+	return playlist
+}
+
+func getAllTracksByArtist(client *spotify.Client, artistID string) (alltracks []spotify.SimpleTrack, err error) {
+	defer glog.Enter("getAllTracksByArtist")()
+
+	albums, err := getAllAlbumsByArtist(client, artistID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, album := range albums {
+		page, err := client.GetAlbumTracks(album.ID)
+		if err != nil {
+			glog.Log("couldn't get tracks for %s (%s): %s", album.Name, album.ID, err)
+			continue
+		}
+
+		for _, track := range page.Tracks {
+			// an album that's attributed to an artist might be a split,
+			// so we don't want to add all the songs on the record, just
+			// the ones by the artist we're lookin for
+			for _, artist := range track.Artists {
+				if artist.ID == spotify.ID(artistID) {
+					alltracks = append(alltracks, track)
+				}
+			}
+		}
+
+	}
+
+	return alltracks, nil
+}
+
+func getAllAlbumsByArtist(client *spotify.Client, artistID string) ([]spotify.SimpleAlbum, error) {
+	// TODO: ensure artistID looks like an artistID
+
+	// TODO: some artists may have more than 50 albums but fuck them
+	limit := 50
+	// TODO: limit to singles and albums or else a lot more artists are
+	// going to get more than 50 results and we don't wanna deal with
+	// that right now
+	albumType := spotify.AlbumTypeSingle | spotify.AlbumTypeAlbum
+	page, err := client.GetArtistAlbumsOpt(spotify.ID(artistID), &spotify.Options{
+		Limit: &limit,
+	}, &albumType)
+	if err != nil {
+		glog.Debug("error getting albums for artist by id %s", artistID)
+		return nil, err
+	}
+	return page.Albums, nil
+}
+
+func randomTracks(tracks []spotify.SimpleTrack, n int) (results []spotify.SimpleTrack) {
+	defer glog.Enter("randomTracks")()
+	max := len(tracks)
+
+	// if there are less tracks than we want to grab, we don't need to
+	// do any work, just return it
+	if max < n {
+		return tracks
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// we want to keep track of what tracks we've seen so we don't end
+	// up with a playlist that has duplicates
+	seen := make(map[spotify.ID]bool)
+	for i := 0; len(results) < n; i++ {
+		track := tracks[r.Intn(max)]
+		if !seen[track.ID] {
+			seen[track.ID] = true
+			results = append(results, track)
+		}
+	}
+	return results
+}
 
 func playlistCreateParse(args []string) string {
 	defer glog.Enter("playlistCreateParse")()
@@ -135,6 +302,12 @@ func playlistCreateParse(args []string) string {
 		glog.Fatal("don't know what to do with url %s", input)
 	}
 
+	if args[0] == "random-by-artist-id" {
+		if len(args[1:]) != 1 {
+			glog.Fatal("err: playlist create random-by-artist-id expects 1 argument")
+		}
+		return "random-by-artist-id"
+	}
 	return "plain"
 }
 

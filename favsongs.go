@@ -16,7 +16,7 @@ var trackDataFilename = "saved-tracks.data"
 func loadTrackData() (tracks []spotify.SavedTrack) {
 	f, err := os.Open(trackDataFilename)
 	if err != nil {
-		debugprint("couldn't open saved track data from file '%s'\n", trackDataFilename)
+		glog.Debug("couldn't open saved track data from file '%s'\n", trackDataFilename)
 		return nil
 	}
 	defer f.Close()
@@ -40,7 +40,7 @@ func saveTrackData(tracks []spotify.SavedTrack) {
 
 func getAllTracks(client *spotify.Client) (tracks []spotify.SavedTrack) {
 	if savedTracks := loadTrackData(); len(savedTracks) > 0 {
-		debugprint("loading tracks from disk\n")
+		glog.Debug("loading tracks from disk\n")
 		return savedTracks
 	}
 
@@ -56,7 +56,7 @@ func getAllTracks(client *spotify.Client) (tracks []spotify.SavedTrack) {
 			log.Fatalf("error getting tracks: %v", err)
 		}
 
-		debugprint("got %s", page.Endpoint)
+		glog.Debug("got %s", page.Endpoint)
 
 		tracks = append(tracks, page.Tracks...)
 
