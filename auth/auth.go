@@ -30,18 +30,15 @@ var permissions = []string{
 	spotify.ScopeUserReadRecentlyPlayed,
 }
 
-// these will be set at build time from env SPOTIFY_ID and SPOTIFY_SECRET
-var clientID string
-var clientSecret string
-
 var glog = logger.DefaultLogger
 var client *spotify.Client
 
 // TODO: use ~/.local/share/spotify-cli/oauth-token
 var tokenPath = path.Join(os.Getenv("HOME"), ".upcoming-shows-token")
 
-// TODO: if the token is older than a certain timeframe, force revalidation
 func SetupClient() *spotify.Client {
+	// TODO: if the token is older than a certain timeframe, force revalidation
+
 	defer glog.Enter("auth.SetupClient")()
 
 	// the redirect URL must be an exact match of a URL you've registered for your application

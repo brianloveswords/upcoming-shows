@@ -1,17 +1,26 @@
+pkg=github.com/brianloveswords/spotify
+secretfile=auth/secret.go
 binary=spotify
 release=release/${binary}
-ldxflags=\
-	-X main.clientID=${SPOTIFY_ID} \
-	-X main.clientSecret=${SPOTIFY_SECRET}
 
-debug: check-env
-	@go build -ldflags "${ldxflags}"
+debug: ${secretfile}
+	@go build -o ${binary}
+
+${secretfile}: check-env
+	@> ${secretfile} echo package auth
+	@>>${secretfile} echo "var clientID = string([]rune"\
+		`python -c "print str(list('${SPOTIFY_ID}')).replace('[', '{').replace(']', '}')"` \
+	")"
+	@>>${secretfile} echo "var clientSecret = string([]rune"\
+		`python -c "print str(list('${SPOTIFY_SECRET}')).replace('[', '{').replace(']', '}')"` \
+	")"
+	@gofmt -w  ${secretfile}
 
 run-debug: debug
 	./${binary}
 
 release: check-env
-	@go build -ldflags "-s -w ${ldxflags}" -o ${release}
+	@go build -ldflags "-s -w" -o ${release}
 	upx ${release}
 
 check-env:
