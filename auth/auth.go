@@ -1,12 +1,17 @@
-package main
+package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path"
 	"time"
 
+	"github.com/brianloveswords/spotify/logger"
+	"github.com/brianloveswords/spotify/util"
 	"github.com/lpabon/godbc"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
@@ -28,19 +33,16 @@ var permissions = []string{
 // these will be set at build time from env SPOTIFY_ID and SPOTIFY_SECRET
 var clientID string
 var clientSecret string
+
+var glog = logger.DefaultLogger
 var client *spotify.Client
 
+// TODO: use ~/.local/share/spotify-cli/oauth-token
 var tokenPath = path.Join(os.Getenv("HOME"), ".upcoming-shows-token")
 
-// allows runtime overriding of build time auth info
-func loadAuthInfo() (id, secret string) {
-	id = mustGet(clientID, "SPOTIFY_ID")
-	secret = mustGet(clientSecret, "SPOTIFY_SECRET")
-	return id, secret
-}
-
-func setupClient() *spotify.Client {
-	defer glog.Enter("setupClient")()
+// TODO: if the token is older than a certain timeframe, force revalidation
+func SetupClient() *spotify.Client {
+	defer glog.Enter("auth.SetupClient")()
 
 	// the redirect URL must be an exact match of a URL you've registered for your application
 	// scopes determine which permissions the user is prompted to authorize
@@ -48,7 +50,7 @@ func setupClient() *spotify.Client {
 
 	auth := spotify.NewAuthenticator(redirectURL, permissions...)
 
-	id, secret := loadAuthInfo()
+	id, secret := clientID, clientSecret
 	auth.SetAuthInfo(id, secret)
 
 	// see if we can just load a token straight up
@@ -83,7 +85,7 @@ func setupClient() *spotify.Client {
 	// you should specify a unique state string to identify the session
 	url := auth.AuthURL(state)
 
-	openURL(url)
+	util.OpenURL(url)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -127,4 +129,17 @@ func setupClient() *spotify.Client {
 
 	godbc.Ensure(client != nil, "failed to create client")
 	return client
+}
+
+// allows runtime overriding of build time auth info
+// func loadAuthInfo() (id, secret string) {
+// 	id = util.MustGet(clientID, "SPOTIFY_ID")
+// 	secret = util.MustGet(clientSecret, "SPOTIFY_SECRET")
+// 	return id, secret
+// }
+
+func randomState() string {
+	b := make([]byte, 24)
+	io.ReadFull(rand.Reader, b)
+	return hex.EncodeToString(b)
 }

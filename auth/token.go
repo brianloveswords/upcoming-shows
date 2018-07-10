@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ type encrypted struct {
 }
 
 func getKey() []byte {
-	id, secret := loadAuthInfo()
+	id, secret := clientID, clientSecret
 	dk, err := scrypt.Key([]byte(secret), []byte(id), 32768, 8, 1, 32)
 	if err != nil {
 		panic(err)

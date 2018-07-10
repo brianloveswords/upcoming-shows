@@ -1,4 +1,4 @@
-package main
+package logger
 
 import (
 	"bytes"
@@ -8,9 +8,9 @@ import (
 )
 
 func TestLoggerVisual(t *testing.T) {
-	logger := NewLogger()
+	logger := New()
 
-	logger.Level = LoggerLevelDebug
+	logger.Level = LevelDebug
 
 	logger.Debug("kick")
 	logger.Debug("out")
@@ -55,11 +55,11 @@ func TestLoggerVisual(t *testing.T) {
 
 	level1()
 
-	logger.Level = LoggerLevelExtreme
+	logger.Level = LevelExtreme
 	level1()
 
 	// shouldn't see output
-	logger.Level = LoggerLevelSilent
+	logger.Level = LevelSilent
 	logger.Debug("if you're seeing this something is wrong")
 }
 
@@ -91,27 +91,27 @@ func TestLoggerLevels(t *testing.T) {
 	log.CmdOutput("output")
 	assert.Equal(t, "output\n", stdout.String())
 
-	log.Level = LoggerLevelExtreme
+	log.Level = LevelExtreme
 	logemall()
 	assert.Equal(t, "<top>: extreme\n<top>: debug\nverbose\nnormal\n", stderr.String())
 	clear()
 
-	log.Level = LoggerLevelDebug
+	log.Level = LevelDebug
 	logemall()
 	assert.Equal(t, "<top>: debug\nverbose\nnormal\n", stderr.String())
 	clear()
 
-	log.Level = LoggerLevelVerbose
+	log.Level = LevelVerbose
 	logemall()
 	assert.Equal(t, "verbose\nnormal\n", stderr.String())
 	clear()
 
-	log.Level = LoggerLevelNormal
+	log.Level = LevelNormal
 	logemall()
 	assert.Equal(t, "normal\n", stderr.String())
 	clear()
 
-	log.Level = LoggerLevelSilent
+	log.Level = LevelSilent
 	logemall()
 	assert.Equal(t, "", stderr.String())
 	clear()

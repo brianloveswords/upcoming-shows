@@ -114,17 +114,38 @@ CommandTree{
     }
 }
 
-* command line flags
-- [ ] spotify auth clear
-- [ ] spotify auth debug
 
-- [X] spotify next
-- [X] spotify pause
-- [X] spotify play
+* store things according to XDG Base Directory Specification
+https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
-- [X] spotify playing fav
+data: $XDG_DATA_HOME or $HOME/.local/share/
+config: $XDG_CONFIG_HOME or $HOME/.config/
+cache: $XDG_CACHE_HOME or $HOME/.cache/
 
-- [ ] spotify playlist create ...
+
+config:
+- nothing yet
+
+data:
+- encrypted oauth token
+
+cache:
+- spotify data, like saved tracks
+- songkick data, like spotifyID->songkickID mapping
+
+
+* directory organization
+
+- auth
+- bin
+- cli
+- logger
+- mixtape
+- playctl
+- songkick
+- util
+
+* command parser, part 2
 
 * command line smoke tester
 cmd.Lint(t)

@@ -7,9 +7,18 @@ import (
 	"os"
 	"sort"
 
+	"github.com/brianloveswords/spotify/logger"
 	"github.com/lpabon/godbc"
 	"github.com/zmb3/spotify"
 )
+
+type Artist struct {
+	Name        string
+	Appearances int
+	SongkickID  int
+}
+
+var glog = logger.DefaultLogger
 
 var trackDataFilename = "saved-tracks.data"
 

@@ -1,4 +1,4 @@
-package main
+package mixtape
 
 import (
 	"bufio"
@@ -6,49 +6,28 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/brianloveswords/spotify/auth"
+	"github.com/brianloveswords/spotify/logger"
+	"github.com/brianloveswords/spotify/util"
 	"github.com/fatih/color"
 	"github.com/zmb3/spotify"
 )
 
-func mixtapeCreate() {
-	if paramMixtapeArtist == nil && paramMixtapeTrackID == nil {
-		glog.Fatal("must pass artist or track parameter")
-	}
-	if paramMixtapeArtist != nil {
-		if *paramMixtapeArtist != "" {
-			mixtapeByArtist(*paramMixtapeArtist, paramMixtapeLength)
-			return
-		}
+var glog = logger.DefaultLogger
 
-		track := mustGetCurrentlyPlaying()
-		artistID := track.Artists[0].ID
-		mixtapeByArtistID(artistID, paramMixtapeLength)
-		return
-	}
-
-	if paramMixtapeTrackID != nil {
-		if *paramMixtapeTrackID == spotify.ID("") {
-			mixtapeByCurrentTrack(paramMixtapeLength)
-			return
-		}
-		mixtapeByTrackID(*paramMixtapeTrackID, paramMixtapeLength)
-		return
-	}
+func ByCurrentTrack(length int) {
+	track := util.MustGetCurrentlyPlaying(auth.SetupClient())
+	ByTrackID(track.ID, length)
 }
 
-func mixtapeByCurrentTrack(length int) {
-	track := mustGetCurrentlyPlaying()
-	mixtapeByTrackID(track.ID, length)
-}
-
-func mixtapeByTrackID(trackID spotify.ID, length int) {
-	client := setupClient()
+func ByTrackID(trackID spotify.ID, length int) {
+	client := auth.SetupClient()
 
 	seedTrack, err := client.GetTrack(trackID)
 	if err != nil {
 		glog.Fatal("couldn't find track for trackID %s: %s", trackID, err)
 	}
-	trackname := songAttributionFromTrack(seedTrack)
+	trackname := util.SongAttributionFromTrack(seedTrack)
 	glog.Log("making mixtape with seed %s...", color.YellowString(trackname))
 
 	seeds := spotify.Seeds{
@@ -73,10 +52,10 @@ func mixtapeByTrackID(trackID spotify.ID, length int) {
 	}
 
 	for _, track := range tracks {
-		glog.Log("adding %s", color.CyanString(songAttributionFromSimpleTrack(&track)))
+		glog.Log("adding %s", color.CyanString(util.SongAttributionFromSimpleTrack(&track)))
 	}
 
-	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, tracksToIDs(tracks)...)
+	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, util.TracksToIDs(tracks)...)
 	if err != nil {
 		glog.Fatal("couldn't add tracks to playlist %s for user %s: %s",
 			color.BlueString(playlist.Name),
@@ -88,9 +67,9 @@ func mixtapeByTrackID(trackID spotify.ID, length int) {
 	glog.CmdOutput("%s", playlist.URI)
 }
 
-func mixtapeByArtist(artist string, length int) {
+func ByArtist(artist string, length int) {
 	var artistID spotify.ID
-	client := setupClient()
+	client := auth.SetupClient()
 	normalizedArtist := strings.ToLower(artist)
 
 	page, err := client.Search(artist, spotify.SearchTypeArtist)
@@ -106,14 +85,14 @@ func mixtapeByArtist(artist string, length int) {
 
 	if len(artists) == 1 {
 		artistID = artists[0].ID
-		mixtapeByArtistID(artistID, paramMixtapeLength)
+		ByArtistID(artistID, length)
 		return
 	}
 
 	for _, found := range artists {
 		if strings.ToLower(found.Name) == normalizedArtist {
 			artistID = found.ID
-			mixtapeByArtistID(artistID, paramMixtapeLength)
+			ByArtistID(artistID, length)
 			return
 		}
 	}
@@ -130,7 +109,7 @@ func mixtapeByArtist(artist string, length int) {
 		os.Exit(1)
 	}
 
-	mixtapeByArtistID(pick.ID, paramMixtapeLength)
+	ByArtistID(pick.ID, length)
 }
 
 func promptForArtistSelection(artists []spotify.FullArtist) *spotify.FullArtist {
@@ -159,21 +138,21 @@ func promptForArtistSelection(artists []spotify.FullArtist) *spotify.FullArtist 
 	}
 }
 
-func mixtapeByArtistID(artistID spotify.ID, length int) {
+func ByArtistID(artistID spotify.ID, length int) {
 	defer glog.Enter("mixtapeByArtistID")()
-	client := setupClient()
+	client := auth.SetupClient()
 
 	artist, err := client.GetArtist(artistID)
 	if err != nil {
 		glog.Fatal("couldn't look up artist with ID %s: %s", artistID, err)
 	}
 
-	alltracks, err := getAllTracksByArtist(client, artistID)
+	alltracks, err := util.GetAllTracksByArtist(client, artistID)
 	if err != nil {
 		glog.Fatal("could not get tracks from artist with ID %s: %s", artistID, err)
 	}
 
-	tracks := randomTracks(alltracks, length)
+	tracks := util.RandomTracks(alltracks, length)
 	if len(tracks) == 0 {
 		glog.Fatal("didn't find any tracks for artist with ID %s", artistID)
 	}
@@ -189,10 +168,10 @@ func mixtapeByArtistID(artistID spotify.ID, length int) {
 	}
 
 	for _, track := range tracks {
-		glog.Log("adding %s", color.CyanString(songAttributionFromSimpleTrack(&track)))
+		glog.Log("adding %s", color.CyanString(util.SongAttributionFromSimpleTrack(&track)))
 	}
 
-	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, tracksToIDs(tracks)...)
+	_, err = client.AddTracksToPlaylist(user.ID, playlist.ID, util.TracksToIDs(tracks)...)
 	if err != nil {
 		glog.Fatal("couldn't add tracks to playlist %s for user %s: %s",
 			color.BlueString(playlist.Name),

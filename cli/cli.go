@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"errors"
@@ -6,8 +6,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/brianloveswords/spotify/logger"
 	"github.com/fatih/color"
 )
+
+var glog = logger.DefaultLogger
 
 type Command struct {
 	Name     string
