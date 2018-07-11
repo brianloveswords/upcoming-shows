@@ -6,8 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"path"
 	"time"
 
 	"github.com/brianloveswords/spotify/logger"
@@ -33,9 +31,6 @@ var permissions = []string{
 var glog = logger.DefaultLogger
 var client *spotify.Client
 
-// TODO: use ~/.local/share/spotify-cli/oauth-token
-var tokenPath = path.Join(os.Getenv("HOME"), ".upcoming-shows-token")
-
 func SetupClient() *spotify.Client {
 	// TODO: if the token is older than a certain timeframe, force revalidation
 
@@ -51,7 +46,7 @@ func SetupClient() *spotify.Client {
 	auth.SetAuthInfo(id, secret)
 
 	// see if we can just load a token straight up
-	tok = loadToken(tokenPath)
+	tok = loadToken()
 
 	if tok != nil {
 		expiry := tok.Expiry
@@ -59,7 +54,7 @@ func SetupClient() *spotify.Client {
 			if newtok, err := client.Token(); err == nil {
 				if newtok.Expiry.After(expiry) {
 					glog.Debug("saving new token: %v", tok.Expiry)
-					saveToken(tok, tokenPath)
+					saveToken(tok)
 				}
 			}
 		}()
@@ -93,7 +88,7 @@ func SetupClient() *spotify.Client {
 			return
 		}
 		// save the token and create that shizz
-		saveToken(token, tokenPath)
+		saveToken(token)
 		c := auth.NewClient(token)
 		client = &c
 
@@ -127,13 +122,6 @@ func SetupClient() *spotify.Client {
 	godbc.Ensure(client != nil, "failed to create client")
 	return client
 }
-
-// allows runtime overriding of build time auth info
-// func loadAuthInfo() (id, secret string) {
-// 	id = util.MustGet(clientID, "SPOTIFY_ID")
-// 	secret = util.MustGet(clientSecret, "SPOTIFY_SECRET")
-// 	return id, secret
-// }
 
 func randomState() string {
 	b := make([]byte, 24)

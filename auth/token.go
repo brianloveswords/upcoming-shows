@@ -1,5 +1,7 @@
 package auth
 
+// TODO: remove all the panics and actually handle errors, or do better logging
+
 import (
 	"bytes"
 	"crypto/aes"
@@ -7,8 +9,8 @@ import (
 	"crypto/rand"
 	"encoding/gob"
 	"io"
-	"os"
 
+	"github.com/brianloveswords/spotify/xdg"
 	"github.com/lpabon/godbc"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/oauth2"
@@ -19,6 +21,9 @@ type encrypted struct {
 	Nonce      []byte
 }
 
+var appdir = xdg.NewApp("spotify-cli")
+var tokenName = "oauth-token"
+
 func getKey() []byte {
 	id, secret := clientID, clientSecret
 	dk, err := scrypt.Key([]byte(secret), []byte(id), 32768, 8, 1, 32)
@@ -27,7 +32,6 @@ func getKey() []byte {
 	}
 	return dk
 }
-
 func encryptToken(tok *oauth2.Token) []byte {
 	// turn token to bytes, then feed to encrypt
 	var buf bytes.Buffer
@@ -101,26 +105,24 @@ func decrypt(buf []byte) []byte {
 	return plaintext
 }
 
-func saveToken(tok *oauth2.Token, path string) {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	defer f.Close()
+func saveToken(tok *oauth2.Token) {
+	f, err := appdir.DataCreate(tokenName)
 	if err != nil {
 		panic(err.Error())
 	}
-
+	defer f.Close()
 	if _, err := f.Write(encryptToken(tok)); err != nil {
 		panic(err.Error())
 	}
 }
 
-func loadToken(path string) *oauth2.Token {
-	f, err := os.Open(path)
-	defer f.Close()
+func loadToken() *oauth2.Token {
+	f, err := appdir.DataOpen(tokenName)
 	if err != nil {
 		// fuck it, just return nil
 		return nil
 	}
-
+	defer f.Close()
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, f); err != nil {
 		panic(err.Error())

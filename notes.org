@@ -114,8 +114,18 @@ CommandTree{
     }
 }
 
+* DONE directory organization
 
-* store things according to XDG Base Directory Specification
+- auth
+- bin
+- cli
+- logger
+- mixtape
+- playctl
+- songkick
+- util
+
+* DONE store things according to XDG Base Directory Specification
 https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
 data: $XDG_DATA_HOME or $HOME/.local/share/
@@ -134,16 +144,17 @@ cache:
 - songkick data, like spotifyID->songkickID mapping
 
 
-* directory organization
+*** code
 
-- auth
-- bin
-- cli
-- logger
-- mixtape
-- playctl
-- songkick
-- util
+basedir := xdg.App("spotify-cli")
+
+basedir.DataCreate("oath-token")
+basedir.DataOpen("oauth-token)
+basedir.CacheStore
+basedir.CacheLoad
+basedir.ConfigStore
+basedir.ConfigLoad
+
 
 * command parser, part 2
 
