@@ -77,7 +77,7 @@ func SetupClient() *spotify.Client {
 	// you should specify a unique state string to identify the session
 	url := auth.AuthURL(state)
 
-	util.OpenURL(url)
+	util.OpenURL(url, false)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

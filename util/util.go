@@ -56,9 +56,9 @@ func SaveIntMap(name string, intmap map[string]int) {
 	}
 }
 
-func OpenURL(url string) {
+func OpenURL(url string, fallback bool) {
 	cmd := exec.Command("open", url)
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil && fallback {
 		// fall back to just printing it
 		fmt.Printf("go here\n: %s\n", url)
 		return
@@ -96,7 +96,7 @@ func TracksToIDs(tracks []spotify.SimpleTrack) (ids []spotify.ID) {
 	return ids
 }
 
-func MustGetCurrentlyPlaying(client *spotify.Client) *spotify.FullTrack {
+func MustGetCurrentlyPlaying(client *spotify.Client, glog logger.Logger) *spotify.FullTrack {
 	playing, err := client.PlayerCurrentlyPlaying()
 	if err != nil {
 		glog.Fatal("could not get currently playing: %s", err)
@@ -197,7 +197,7 @@ func FindArtistID(c *spotify.Client, artist string) *spotify.ID {
 	return nil
 }
 
-func LogCurrentTrack(client *spotify.Client, prefix string) {
+func LogCurrentTrack(client *spotify.Client, glog logger.Logger, prefix string) {
 	playing, _ := client.PlayerCurrentlyPlaying()
 	if playing != nil {
 		song := SongAttributionFromTrack(playing.Item)

@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -35,6 +36,14 @@ func New() Logger {
 		Level:       LevelNormal,
 	}
 }
+
+func (l *Logger) Write(p []byte) (n int, err error) {
+	if l.Level == LevelSilent {
+		return ioutil.Discard.Write(p)
+	}
+	return l.Stderr.Write(p)
+}
+
 func (l *Logger) Fatal(format string, v ...interface{}) {
 	l.Log(format, v...)
 	os.Exit(1)
@@ -90,12 +99,12 @@ func (l *Logger) Enter(name string) func() {
 	}
 }
 
-func (l *Logger) IsLevelSilent() bool  { return l.Level <= LevelSilent }
-func (l *Logger) IsLevelNormal() bool  { return l.Level <= LevelNormal }
-func (l *Logger) IsLevelLog() bool     { return l.Level <= LevelNormal }
-func (l *Logger) IsLevelVerbose() bool { return l.Level <= LevelVerbose }
-func (l *Logger) IsLevelDebug() bool   { return l.Level <= LevelDebug }
-func (l *Logger) IsLevelExtreme() bool { return l.Level <= LevelExtreme }
+func (l *Logger) IsLevelSilent() bool  { return l.Level == LevelSilent }
+func (l *Logger) IsLevelNormal() bool  { return l.Level >= LevelNormal }
+func (l *Logger) IsLevelLog() bool     { return l.Level >= LevelNormal }
+func (l *Logger) IsLevelVerbose() bool { return l.Level >= LevelVerbose }
+func (l *Logger) IsLevelDebug() bool   { return l.Level >= LevelDebug }
+func (l *Logger) IsLevelExtreme() bool { return l.Level >= LevelExtreme }
 
 func (l *Logger) stdoutPrint(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
