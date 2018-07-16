@@ -4,62 +4,15 @@ import (
 	"os"
 
 	"github.com/brianloveswords/spotify/auth"
-	"github.com/brianloveswords/spotify/cli"
 	"github.com/brianloveswords/spotify/logger"
-	"github.com/brianloveswords/spotify/mixtape"
-	"github.com/brianloveswords/spotify/show"
 	"github.com/brianloveswords/spotify/util"
 	"github.com/fatih/color"
+	"github.com/urfave/cli"
 )
-
-// these will be set at build time from env SPOTIFY_ID and SPOTIFY_SECRET
-var clientID string
-var clientSecret string
 
 var glog = logger.DefaultLogger
 
-func cliRouter(args []string) {
-	mainCmd := cli.Command{
-		Name: "spotify",
-		Help: "control spotify from the commandline",
-		Commands: cli.Subcommands{
-			&cli.Command{
-				Name: "play",
-				Help: "play the current song",
-				Func: mainPlay,
-			},
-			&cli.Command{
-				Name: "pause",
-				Help: "pause the current song",
-				Func: mainPause,
-			},
-			&cli.Command{
-				Name:  "skip",
-				Help:  "skip the current song",
-				Alias: []string{"next"},
-				Func:  mainNext,
-			},
-			&cli.Command{
-				Name:  "prev",
-				Help:  "go back to the last song",
-				Alias: []string{"back"},
-				Func:  mainPrev,
-			},
-			&cli.Command{
-				Name: "fav",
-				Help: "add the current song to your library",
-				Func: mainFav,
-			},
-			&show.CLI,
-			&mixtape.CLI,
-		},
-	}
-	err := mainCmd.Run(args)
-	if err != nil {
-		glog.Fatal("%s", err)
-	}
-}
-func mainFav() {
+func mainFav(c *cli.Context) error {
 	client := auth.SetupClient()
 	playing, err := client.PlayerCurrentlyPlaying()
 	if err != nil {
@@ -71,9 +24,10 @@ func mainFav() {
 	}
 	name := util.SongAttributionFromTrack(track)
 	glog.Log("adding to library: %s", color.CyanString(name))
+	return nil
 }
 
-func mainPlay() {
+func mainPlay(c *cli.Context) error {
 	client := auth.SetupClient()
 	if glog.IsLevelNormal() {
 		util.LogCurrentTrack(client, "playing")
@@ -81,8 +35,9 @@ func mainPlay() {
 	if err := client.Play(); err != nil {
 		glog.Fatal("couldn't start playback: %s", err)
 	}
+	return nil
 }
-func mainPause() {
+func mainPause(c *cli.Context) error {
 	client := auth.SetupClient()
 	if glog.IsLevelNormal() {
 		util.LogCurrentTrack(client, "pausing")
@@ -90,23 +45,65 @@ func mainPause() {
 	if err := client.Pause(); err != nil {
 		glog.Fatal("couldn't pause playback: %s", err)
 	}
+	return nil
 }
 
-func mainNext() {
+func mainNext(c *cli.Context) error {
 	client := auth.SetupClient()
 	util.LogCurrentTrack(client, "skipping")
 	if err := client.Next(); err != nil {
 		glog.Fatal("couldn't skip track: ", err)
 	}
+	return nil
 }
-func mainPrev() {
+func mainPrev(c *cli.Context) error {
 	client := auth.SetupClient()
 	if err := client.Previous(); err != nil {
 		glog.Fatal("couldn't go back: ", err)
 	}
 	util.LogCurrentTrack(client, "going back to")
+	return nil
 }
 
 func main() {
-	cliRouter(os.Args[1:])
+	app := cli.NewApp()
+	app.Writer = os.Stderr
+	app.ErrWriter = os.Stderr
+	app.Version = "1.0.0"
+	app.Commands = []cli.Command{
+		{
+			Name:     "play",
+			Category: "play control",
+			Usage:    "play the current song",
+			Action:   mainPlay,
+		},
+		{
+			Name:     "pause",
+			Category: "play control",
+			Usage:    "pause the current song",
+			Action:   mainPause,
+		},
+		{
+			Name:     "skip",
+			Category: "play control",
+			Aliases:  []string{"next"},
+			Usage:    "skip the current song",
+			Action:   mainNext,
+		},
+		{
+			Name:     "prev",
+			Category: "play control",
+			Aliases:  []string{"back"},
+			Usage:    "prev the current song",
+			Action:   mainPrev,
+		},
+		{
+			Name:   "fav",
+			Usage:  "add current song to library",
+			Action: mainFav,
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		os.Exit(1)
+	}
 }

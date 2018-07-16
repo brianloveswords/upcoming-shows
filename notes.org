@@ -155,8 +155,68 @@ basedir.CacheLoad
 basedir.ConfigStore
 basedir.ConfigLoad
 
+* import from urls
+
+- songkick (that's done, really)
+- tiny mix tapes
+- pitchfork
+- discogs?
+
+* albums I should spend money on
+
+- analyze listening patterns, top tracks
+- figure out what I artists I should be showing support
 
 * command parser, part 2
+*** examples
+*play*
+*pause*
+*skip*
+*prev*
+*fav*
+
+*auth show*
+*auth login*
+*auth logout*
+*auth export [outfile=-]*
+*auth import [infile=-]*
+
+*playlist create <name>*
+- playlist create "hey yo what up"
+- playlist create --name="hey yo what up"
+
+*playlist from-url <url> [tracks=latest|random|all] [length=10]*
+- playlist from-url http://songkick.com/concerts/1234-yep --tracks=all
+- playlist from-url --track=random --length=10 http://songkick.com/concerts/1234-yep
+- playlist from-url --open --track=latest --url=http://songkick.com/concerts/1234-yep
+
+*mix by-artist [artist=%current-artist%] [length=10] [name='{mix} %artist%']*
+- mixtape by-artist ~# use defaults~
+- mixtape by-artist chavez  ~# name is 1st positional argument~
+- mixtape by-artist chavez 10 "dem chavez songs" ~# all positional~
+- mixtape by-artist --length=10 chavez
+- mixtape by-artist --length=10 --artist=chavez
+- mixtape by-artist --length=10 --artist=chavez --name="lol cool"
+- mixtape by-artist --length=3
+
+*mix by-track [id=%current-track-id%] [length=10] [name='{mixtape} %artist% - %track%']*
+- mixtape by-track --length=100
+- mixtape by-track --id=a2da3f
+
+*** parsing
+- pull out args
+
+[mixtape, by-artist, chavez, 10, "dem chavez songs"]
+
+
+
+* discogs + labels
+
+- use the [[https://www.discogs.com/developers/#page:database,header:database-all-label-releases][discogs API]] to look up labels
+- create a playlist of all albums released by that label
+
+
+
 
 * command line smoke tester
 cmd.Lint(t)
@@ -168,3 +228,21 @@ cmd.Lint(t)
   - is there an example for each parameter?
 - check documentation
 - check for unreachable cmds
+* thinking about interfaces
+
+cli is but one interface, another could be web server
+determine what is part of the interface, and what is business logic
+
+e.g.
+
+
+interface: cmd.MixtapeFromArtist(artistID string)
+- can & should print output
+- can exit execution, call fatal
+- should handle errors
+
+logic: mixtape.FromArtist(artistID spotify.ID) (playlist spotify.ID, err error)
+- should not print output
+  - exception: debugging
+- should not panic
+  - exception: programmer error, e.g. preconditions fail
